@@ -262,7 +262,7 @@ map:["################",
      "#######.d##.D.E#",
      "################"],
 sol:["DDR","DRRRRRRWWWDRDD","DRRRRRRRRRRRR","DRRRRRRRRRRDDDRRR"]},
-{name:'我们',cap:4,hint:'最后一关。四个你，一起走出去。',
+{name:'我们',cap:4,hint:'四个你，一起走出去。',
 map:["###################",
      "#S..#..#..#...#...#",
      "#...A..1..B...C...#",
@@ -270,7 +270,19 @@ map:["###################",
      "################D##",
      "###############.E.#",
      "###################"],
-sol:["DDRWU","DRRRRRRRRD","DRRRRRRRRRRRD","DRRRRRRRRRRRRRRRRD","DRRRRRRRRRRRRRRRDDD"]}
+sol:["DDRWU","DRRRRRRRRD","DRRRRRRRRRRRD","DRRRRRRRRRRRRRRRRD","DRRRRRRRRRRRRRRRDDD"]},
+{name:"节拍",cap:1,hint:"两扇反向门，一个影子。什么时候踩上去、什么时候离开，都要掐准。",
+map:["##################", "#....#############", "#.S..1..A..2..B.E#", "#....#############", "#a..b#############", "##################"],
+sol:["DDWLWWRRWR", "RRRRRRRRRRRRRR"]},
+{name:"推过去",cap:1,hint:"箱子在你进不去的地方。那就让过去的你替你推。",
+map:["##############", "#S..C..o....a#", "#...#.b......#", "#.c.##########", "#...A...B..E.#", "##############"],
+sol:["WRRRRRRRRRRDLLLLL", "DDRWDRWWWWRRRRWWRRRR"]},
+{name:"开门的人",cap:2,hint:"过去的你要等你开门，你也要等过去的你开门。先录哪一个？",
+map:["#############", "#S....C....a#", "#..c..#######", "#.....#.....#", "#.....A..b..#", "#.....#.....#", "##########B##", "#########.E.#", "#############"],
+sol:["DRRWWDDRRWRRRR", "RRRRRRRRRR", "DDDRRRRWWWRRRRRDDD"]},
+{name:"告别",cap:3,hint:"最后一关。学过的都用上。",
+map:["######################", "#S..C..o....a#########", "#...#.b......#########", "#.c.##################", "#...A...B..2...C..D.E#", "#################d####", "######################"],
+sol:["DDR", "RRRRRRRRRRDLLLLLWWWWU", "DDDRRWWWWWWWWWWRRRRRRRRRRRRRRD", "DDDRRWWWWWWWWWWRRRRRRRRRRRRRRRRR"]}
 ];
 
 (function(){
@@ -446,7 +458,7 @@ function onWin(){autoplay=autoplay&&autoplay.loop<L.sol.length?autoplay:null;
   SFX.win();burst(g.exit.x,g.exit.y,'#ffffff',40);ghosts.forEach((_,i)=>{const p=curFrame().a[i];burst(p.x,p.y,GHOST_COL[i],14);});
   setTimeout(()=>{if(!won)return;winShown=true;const last=li===LEVELS.length-1;
     $('winT').textContent=last?'你们一起出来了':'通关';
-    $('winP').innerHTML=last?'四个你，同一条路，同一个出口。<br>谢谢你陪过去的自己走完这一程。<br>总共 <b>'+steps+'</b> 步。'
+    $('winP').innerHTML=last?'所有的你，同一条路，同一个出口。<br>谢谢你陪过去的自己走完这一程。<br>总共 <b>'+steps+'</b> 步。'
       :'用了 <b>'+ghosts.length+'</b> 个影子，所有轮次加起来 <b>'+steps+'</b> 步'+(prev&&prev.steps<=steps?'（最好成绩 '+prev.steps+' 步）':'')+'。';
     $('nextBtn').textContent=last?'回到选关':'下一关';
     $('winOv').hidden=false;$('nextBtn').focus();},900);}

@@ -306,7 +306,7 @@ function onWin(){autoplay=autoplay&&autoplay.loop<L.sol.length?autoplay:null;
   SFX.win();burst(g.exit.x,g.exit.y,'#ffffff',40);ghosts.forEach((_,i)=>{const p=curFrame().a[i];burst(p.x,p.y,GHOST_COL[i],14);});
   setTimeout(()=>{if(!won)return;winShown=true;const last=li===LEVELS.length-1;
     $('winT').textContent=last?'你们一起出来了':'通关';
-    $('winP').innerHTML=last?'四个你，同一条路，同一个出口。<br>谢谢你陪过去的自己走完这一程。<br>总共 <b>'+steps+'</b> 步。'
+    $('winP').innerHTML=last?'所有的你，同一条路，同一个出口。<br>谢谢你陪过去的自己走完这一程。<br>总共 <b>'+steps+'</b> 步。'
       :'用了 <b>'+ghosts.length+'</b> 个影子，所有轮次加起来 <b>'+steps+'</b> 步'+(prev&&prev.steps<=steps?'（最好成绩 '+prev.steps+' 步）':'')+'。';
     $('nextBtn').textContent=last?'回到选关':'下一关';
     $('winOv').hidden=false;$('nextBtn').focus();},900);}
