@@ -1,4 +1,4 @@
-<title>昨日的我</title>
+<title>分身大作战</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&display=swap">
@@ -69,8 +69,6 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 .ab.rw svg{width:30px;height:30px}
 .ab.rw{color:var(--cyan)}
 .ab.rw:active .o{box-shadow:0 1px 0 #0d4448}
-#keys{display:none;color:#6f6890;font-size:11px;text-align:center;margin-top:8px}
-@media (pointer:fine){#keys{display:block}}
 @media (max-height:620px){#timeline{display:none} .ab .o{width:42px;height:42px} .ab.rw .o{width:56px;height:56px}}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 /* overlays */
@@ -102,8 +100,29 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 .lv.done{border-color:#4f8f56}
 .lv.done small{color:var(--mint)}
 .lv:disabled{opacity:.35;cursor:not-allowed}
-#winOv .card{text-align:center;align-items:stretch}
-#winT{font-size:44px}
+#winOv{background:rgba(10,9,16,.62);align-items:center}
+#winOv .card{text-align:center;align-items:stretch;animation:pop .45s cubic-bezier(.2,1.6,.4,1) both;gap:12px}
+@keyframes pop{0%{transform:scale(.6) translateY(30px);opacity:0}100%{transform:none;opacity:1}}
+#winKicker{font-size:12px;letter-spacing:.25em;color:var(--dim)}
+#winT{font-size:46px;line-height:1;background:linear-gradient(180deg,#fff6c9,#f2a33a);-webkit-background-clip:text;background-clip:text;color:transparent}
+#stars{display:flex;justify-content:center;gap:10px;height:52px;align-items:center}
+#stars i{width:44px;height:44px;display:block;background:#2d2748;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);transition:transform .2s}
+#stars i:nth-child(2){width:52px;height:52px}
+#stars i.on{background:linear-gradient(180deg,#fff3a8,#f2a33a);animation:starpop .45s cubic-bezier(.2,1.8,.4,1) both;filter:drop-shadow(0 0 10px rgba(242,163,58,.6))}
+@keyframes starpop{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
+#winStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#winStats div{background:var(--bg);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;gap:2px}
+#winStats b{font-size:22px;font-variant-numeric:tabular-nums}
+#winStats span{font-size:11px;color:var(--dim)}
+#newRec{align-self:center;font-size:12px;color:#1a1426;background:var(--amber);border-radius:999px;padding:3px 10px;animation:pop .4s .9s cubic-bezier(.2,1.6,.4,1) both}
+#winP{font-size:13.5px}
+#winP span{display:block;opacity:0;animation:fadeup .6s ease-out forwards}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#winOv.skip *{animation-delay:0s!important;animation-duration:.01s!important}
+#winOv.finale #winT{font-size:40px}
+#skipHint{font-size:11px;color:#6f6890}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+.lv .st{font-size:10px;letter-spacing:1px;color:var(--amber)}
 @media (prefers-reduced-motion:reduce){#toast{transition:none} #coach i{animation:none}}
 </style>
 
@@ -125,17 +144,16 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
     <button class="ab" data-c="retry" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></span>重走</button>
     <button class="ab" data-c="solve" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span>提示</button>
   </div>
-  <div id="keys">键盘：方向键/WASD 移动 · 空格 等待 · R 留影 · Z 撤销 · X 重走 · Esc 清空影子</div>
 
   <div class="ov" id="titleOv">
     <div class="wrap">
       <div class="sub">一个和过去的自己合作的解谜游戏</div>
-      <h1>昨日的我</h1>
-      <p>按下<b>「留影」</b>，这一轮的你会留下来，变成<b>影子</b>；你自己回到起点，重新出发。<br>影子会把你按过的每个键原样再按一遍。他不知道你在想什么，他只会照做。</p>
+      <h1>分身大作战</h1>
+      <p>按下<b>「留影」</b>，这一轮的你会留下来，变成<b>影子</b>；你自己回到起点，重新出发。<br>影子会把你走过的每一步原样再走一遍。他不知道你在想什么，他只会照做。</p>
       <div class="legend">
         <span class="sw" style="background:var(--amber)"></span><span>压力板：有人或箱子踩住时，同色的门打开</span>
         <span class="sw" style="background:repeating-linear-gradient(45deg,var(--sky) 0 3px,transparent 3px 6px);outline:1px solid var(--sky)"></span><span>反向门（斜纹）：同色板被踩住时反而关上</span>
-        <span class="sw" style="background:var(--cyan);opacity:.75"></span><span>影子：重复你上一轮的按键，撞墙也照撞</span>
+        <span class="sw" style="background:var(--cyan);opacity:.75"></span><span>影子：重复你上一轮的每一步，撞墙也照撞</span>
       </div>
       <div class="row"><button class="btn pri" id="startBtn" type="button">开始游戏</button></div>
       <div class="row"><button class="btn" id="selBtn" type="button">选关</button></div>
@@ -150,13 +168,18 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
     </div>
   </div>
   <div class="ov" id="winOv" hidden>
-    <div class="card">
-      <h2 id="winT">通关</h2>
+    <div class="card" id="winCard">
+      <div id="winKicker">第 1 关 · 回声</div>
+      <h2 id="winT">通关！</h2>
+      <div id="stars" aria-label="星级"><i></i><i></i><i></i></div>
+      <div id="winStats"><div><b id="wsSteps">0</b><span>总步数</span></div><div><b id="wsGhosts">0</b><span>用了分身</span></div><div><b id="wsPar">0</b><span>三星步数</span></div></div>
+      <div id="newRec" hidden>新纪录</div>
       <p id="winP"></p>
       <div class="row"><button class="btn pri" id="nextBtn" type="button">下一关</button></div>
       <div class="row"><button class="btn" id="againBtn" type="button">再玩一次</button><button class="btn" id="winSel" type="button">选关</button></div>
     </div>
   </div>
+  <canvas id="fx"></canvas>
 </div>
 
 <script>
@@ -191,7 +214,7 @@ const SFX={
   close(){tone(500,.12,'sawtooth',.03,220);},
   rewind(ms){tone(1200,ms/1000,'sawtooth',.035,90);tone(600,ms/1000,'triangle',.03,60);},
   spawn(){[523,659,784].forEach((f,i)=>tone(f,.15,'triangle',.05,null,i*.05));},
-  win(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.22,'square',.045,null,i*.09));},
+  win(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.22,'square',.045,null,i*.09));[523,659,784].forEach(f=>tone(f*2,.6,'triangle',.03,null,.5));},
   deny(){tone(160,.12,'square',.05,120);}
 };
 
@@ -278,7 +301,7 @@ function sfxDiff(f0,f1){const pe=f1.ev[f1.ev.length-1];
   let op=0,cl=0;f1.doors.forEach((d,i)=>{if(d&&!f0.doors[i])op++;if(!d&&f0.doors[i])cl++;});if(op)SFX.open();else if(cl)SFX.close();}
 function rewind(){ if(won||rewinding)return;
   if(!cur.length){toast('先走几步，再留影');SFX.deny();return;}
-  if(ghosts.length>=L.cap){toast('这一关最多 '+L.cap+' 个影子。按 X 重走这一轮，或 Esc 清空影子');SFX.deny();shake=6;return;}
+  if(ghosts.length>=L.cap){toast('这一关最多 '+L.cap+' 个影子。点「重走」再走一遍这一轮，或在菜单里清空影子');SFX.deny();shake=6;return;}
   const fr=frames.slice();const ms=Math.min(1100,250+fr.length*45);
   if(fast){finishRewind();return;}
   rewinding={fr,t0:performance.now(),ms};SFX.rewind(ms);queue=[];}
@@ -323,7 +346,7 @@ document.querySelectorAll('#dpad [data-a]').forEach(bt=>{let iv=null;const a=bt.
 document.querySelectorAll('[data-c]').forEach(bt=>bt.addEventListener('click',()=>{({wait:()=>act('W'),rewind,undo,retry,reset:resetAll,solve})[bt.dataset.c]();if(bt.dataset.c==='reset')hideOv();bt.blur();}));
 let ts=null;
 const stg=$('stage');
-stg.addEventListener('pointerdown',e=>{ts={x:e.clientX,y:e.clientY,id:e.pointerId};});
+stg.addEventListener('pointerdown',e=>{if(won&&!winShown&&!autoplay){winTimer&&clearTimeout(winTimer);const st=progress.solved[L.name];onWinNow();return;}ts={x:e.clientX,y:e.clientY,id:e.pointerId};});
 stg.addEventListener('pointerup',e=>{if(!ts||!g)return;const dx=e.clientX-ts.x,dy=e.clientY-ts.y;ts=null;
   if(Math.max(Math.abs(dx),Math.abs(dy))>=22){act(Math.abs(dx)>Math.abs(dy)?(dx>0?'R':'L'):(dy>0?'D':'U'));coachDone();return;}
   // a tap: on yourself = wait one step, on a neighbouring tile = step there
@@ -335,12 +358,13 @@ stg.addEventListener('pointercancel',()=>{ts=null;});
 function coachDone(){if(!$('coach').hidden){$('coach').hidden=true;store.set('zuori-coached',true);}}
 
 // ---------- overlays ----------
+function onWinNow(){const steps=ghosts.reduce((s,r)=>s+r.length,0)+cur.length;showWin(steps,starsFor(L,steps),null,false,li===LEVELS.length-1);}
 function hideOv(){['titleOv','selOv','winOv'].forEach(id=>$(id).hidden=true);}
 function showSel(){hideOv();const gr=$('grid');gr.innerHTML='';
   const maxOpen=maxOpenIdx();
   LEVELS.forEach((lv,i)=>{const bt=document.createElement('button');bt.type='button';const done=progress.solved[lv.name];
     bt.className='lv'+(done?' done':'');bt.disabled=i>maxOpen;
-    bt.innerHTML='<span>'+(i+1)+'</span>'+lv.name+'<small>'+(done?'✓ '+done.steps+' 步':i>maxOpen?'未解锁':lv.cap+' 个影子')+'</small>';
+    bt.innerHTML='<span>'+(i+1)+'</span>'+lv.name+(done?'<small class="st">'+'★'.repeat(done.stars||1)+'☆'.repeat(3-(done.stars||1))+'</small>':'<small>'+(i>maxOpen?'未解锁':lv.cap+' 个影子')+'</small>');
     bt.onclick=()=>loadLevel(i);gr.appendChild(bt);});
   $('selOv').hidden=false;}
 $('startBtn').onclick=()=>{ac();const last=store.get('zuori-last',0);const maxOpen=maxOpenIdx();loadLevel(Math.min(last,maxOpen,LEVELS.length-1));};
@@ -351,17 +375,60 @@ $('nextBtn').onclick=()=>{if(li+1<LEVELS.length)loadLevel(li+1);else showSel();}
 function toggleMute(){muted=!muted;store.set('zuori-muted',muted);$('muteBtn').textContent='声音：'+(muted?'关':'开');}
 $('muteBtn').onclick=toggleMute;$('muteBtn').textContent='声音：'+(muted?'关':'开');
 
+// ---------- win celebration ----------
+function parOf(lv){return lv.sol.reduce((n,x)=>n+x.length,0);}
+function starsFor(lv,steps){const par=parOf(lv);return steps<=par?3:steps<=Math.ceil(par*1.35)+2?2:1;}
+let celeT0=0,winTimer=null,winAnim=[];
 function onWin(){autoplay=autoplay&&autoplay.loop<L.sol.length?autoplay:null;
-  const steps=ghosts.reduce((s,r)=>s+r.length,0)+cur.length;
-  const prev=progress.solved[L.name];if(!prev||steps<prev.steps)progress.solved[L.name]={steps};store.set('zuori-progress2',progress);
+  const steps=ghosts.reduce((s,r)=>s+r.length,0)+cur.length;const stars=starsFor(L,steps);
+  const prev=progress.solved[L.name];const rec=!prev||steps<prev.steps;
+  progress.solved[L.name]={steps:rec?steps:prev.steps,stars:Math.max(stars,prev&&prev.stars||0)};store.set('zuori-progress2',progress);
   if(fast)return;
-  SFX.win();burst(g.exit.x,g.exit.y,'#ffffff',40);ghosts.forEach((_,i)=>{const p=curFrame().a[i];burst(p.x,p.y,GHOST_COL[i],14);});
-  setTimeout(()=>{if(!won)return;winShown=true;const last=li===LEVELS.length-1;
-    $('winT').textContent=last?'你们一起出来了':'通关';
-    $('winP').innerHTML=last?'所有的你，同一条路，同一个出口。<br>谢谢你陪过去的自己走完这一程。<br>总共 <b>'+steps+'</b> 步。'
-      :'用了 <b>'+ghosts.length+'</b> 个影子，所有轮次加起来 <b>'+steps+'</b> 步'+(prev&&prev.steps<=steps?'（最好成绩 '+prev.steps+' 步）':'')+'。';
-    $('nextBtn').textContent=last?'回到选关':'下一关';
-    $('winOv').hidden=false;$('nextBtn').focus();},900);}
+  const last=li===LEVELS.length-1;celeT0=performance.now();
+  SFX.win();vibrate(last?[30,50,30,50,30,50,120]:[25,40,25,40,70]);
+  burst(g.exit.x,g.exit.y,'#ffffff',40);ghosts.forEach((_,i)=>{const p=curFrame().a[i];burst(p.x,p.y,GHOST_COL[i],14);});
+  confettiBurst(last?200:120);if(last)confettiRain(3200);
+  clearTimeout(winTimer);winTimer=setTimeout(()=>showWin(steps,stars,prev,rec,last),last?1500:1000);}
+function showWin(steps,stars,prev,rec,last){if(!won||winShown)return;winShown=true;clearTimeout(winTimer);
+  const ov=$('winOv');ov.classList.remove('skip');ov.classList.toggle('finale',last);
+  $('winKicker').textContent='第 '+(li+1)+' 关 · '+L.name;
+  $('winT').textContent=last?'全部通关！':['','过关','漂亮！','完美！'][stars];
+  $('wsGhosts').textContent=ghosts.length;$('wsPar').textContent=parOf(L);$('wsSteps').textContent='0';
+  $('newRec').hidden=!(rec&&prev);
+  const total=LEVELS.reduce((n,lv)=>n+(progress.solved[lv.name]?.stars||0),0);
+  $('winP').innerHTML=last?['所有的你，同一条路，同一个出口。','谢谢你陪过去的自己走完这一程。','一共收集了 <b>'+total+'</b> / '+LEVELS.length*3+' 颗星。','<i id="skipHint">点卡片可以跳过动画</i>'].map((t,i)=>'<span style="animation-delay:'+(0.9+i*0.6)+'s">'+t+'</span>').join('')
+    :'<span style="animation-delay:.9s">'+(stars<3?'少走几步能拿 '+(stars+1)+' 星。':'这一关的分身配合得刚刚好。')+'</span>';
+  $('nextBtn').textContent=last?'回到选关':'下一关';
+  [...$('stars').children].forEach(i=>i.classList.remove('on'));
+  ov.hidden=false;$('nextBtn').focus();
+  // stars light one by one, step counter rolls up; a tap on the card finishes everything at once
+  winAnim.forEach(clearTimeout);winAnim=[];const t0=performance.now(),dur=650;
+  (function roll(){if(!ov.hidden&&!ov.classList.contains('skip')){const k=Math.min(1,(performance.now()-t0)/dur);$('wsSteps').textContent=Math.round(steps*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(roll);}})();
+  for(let i=0;i<stars;i++)winAnim.push(setTimeout(()=>lightStar(i),380+i*260));
+  ov.dataset.steps=steps;ov.dataset.stars=stars;}
+function lightStar(i){const el=$('stars').children[i];if(el.classList.contains('on'))return;el.classList.add('on');
+  tone(880*Math.pow(1.26,i),.18,'square',.05);vibrate(12);
+  const r=el.getBoundingClientRect(),ar=$('app').getBoundingClientRect();confettiBurst(18,r.left-ar.left+r.width/2,r.top-ar.top+r.height/2,['#fff3a8','#f2a33a','#ffffff']);}
+function skipWin(){const ov=$('winOv');if(ov.hidden||ov.classList.contains('skip'))return;ov.classList.add('skip');winAnim.forEach(clearTimeout);
+  $('wsSteps').textContent=ov.dataset.steps;for(let i=0;i<+ov.dataset.stars;i++){const el=$('stars').children[i];el.classList.add('on');}}
+$('winCard').addEventListener('click',e=>{if(!e.target.closest('button'))skipWin();});
+function vibrate(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
+// confetti on a layer over the whole game frame
+const fx=$('fx'),fctx=fx.getContext('2d');let conf=[],rainUntil=0;
+const CONF_COL=['#5ee6e6','#ff7ac8','#c4f05a','#ffd36b','#f2a33a','#4fc3f7','#b388ff','#ffffff'];
+function fxSize(){const r=$('app').getBoundingClientRect(),d=window.devicePixelRatio||1;fx.width=Math.round(r.width*d);fx.height=Math.round(r.height*d);fctx.setTransform(d,0,0,d,0,0);}
+function confettiBurst(n,x,y,cols){const r=$('app').getBoundingClientRect();if(x===undefined){const c=cv.getBoundingClientRect();x=(c.left+c.width/2)-r.left;y=(c.top+c.height*.45)-r.top;}
+  for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*Math.PI*1.3,v=4+Math.random()*7;
+    conf.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,w:4+Math.random()*5,h:6+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:(cols||CONF_COL)[i%(cols||CONF_COL).length],life:110+Math.random()*60});}}
+function confettiRain(ms){rainUntil=performance.now()+ms;}
+function drawFx(now){if(!conf.length&&now>rainUntil){if(fx._dirty){fctx.clearRect(0,0,fx.width,fx.height);fx._dirty=false;}return;}
+  if(fx.width<2)fxSize();const W=fx.width/(window.devicePixelRatio||1);fx._dirty=true;
+  if(now<rainUntil&&Math.random()<.9)conf.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*1.5,vy:1+Math.random()*2,w:4+Math.random()*5,h:6+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:CONF_COL[(Math.random()*CONF_COL.length)|0],life:260});
+  fctx.clearRect(0,0,fx.width,fx.height);
+  conf=conf.filter(p=>{p.vy+=.18;p.vx*=.985;p.vy=Math.min(p.vy,4.2);p.x+=p.vx+Math.sin(p.r)*.6;p.y+=p.vy;p.r+=p.vr;p.life--;
+    fctx.save();fctx.translate(p.x,p.y);fctx.rotate(p.r);fctx.scale(1,Math.cos(p.r*2.3));fctx.globalAlpha=Math.min(1,p.life/30);fctx.fillStyle=p.c;fctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);fctx.restore();
+    return p.life>0&&p.y<fx.height;});}
+new ResizeObserver(fxSize).observe($('app'));
 
 // ---------- rendering ----------
 function resize(){if(!g)return;if(!rewinding&&!autoplay)applyRot(wantRot());const st=$('stage');const w=st.clientWidth,h=st.clientHeight;const dpr=window.devicePixelRatio||1;
@@ -445,6 +512,7 @@ function render(now){
     if(a&&a!=='W'){if(a==='L')facing[i]=1;if(a==='R')facing[i]=0;}
     if(from&&ev==='bump'&&P<1){const k=Math.sin(P*Math.PI)*0.18;x+=DIRS[a][0]*k;y+=DIRS[a][1]*k;}
     if(from&&(ev==='move'||ev==='push')&&P<1)bob=Math.sin(P*Math.PI)*2;
+    if(won&&celeT0&&!rewinding){bob+=Math.abs(Math.sin((now-celeT0)/130+i*.8))*5;}
     const isP=i===n-1;const fl=facing[i]||0;
     if(isP){b.globalAlpha=.35;px('#000',Math.round(x*TS)+3,Math.round(y*TS)+14,10,2);b.globalAlpha=1;drawGuy(heroSpr[fl],x,y,bob,1);}
     else{const gc=i%GHOST_COL.length;const flick=.55+.12*Math.sin(now/140+i*2);drawGuy(ghostSpr[gc][fl],x,y,bob,rewinding?.35:flick);
@@ -452,6 +520,7 @@ function render(now){
       if(cur.length>=ghosts[i].length&&!rewinding){b.globalAlpha=.6;px(GHOST_COL[gc],Math.round(x*TS)+2,Math.round(y*TS)+15,12,1);b.globalAlpha=1;}}}
   // particles
   particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.03;p.life--;b.globalAlpha=Math.max(0,Math.min(1,p.life/30));px(p.col,Math.round(p.x),Math.round(p.y));return p.life>0;});b.globalAlpha=1;
+  drawFx(now);
   // blit
   ctx.imageSmoothingEnabled=false;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
   let sx=0,sy=0;if(shake>0){sx=(Math.random()-.5)*shake*scale*.5;shake*=.85;if(shake<.3)shake=0;}
