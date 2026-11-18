@@ -62,9 +62,11 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
   padding:7px 14px;font-size:12.5px;color:var(--ink);pointer-events:none;white-space:nowrap}
 #coach i{display:block;width:22px;height:22px;border-radius:50%;background:var(--ink);opacity:.9;animation:swipe 1.4s ease-in-out infinite}
 @keyframes swipe{0%{transform:translateX(-10px);opacity:0}20%{opacity:.9}80%{opacity:.9}100%{transform:translateX(14px);opacity:0}}
-#hint{all:unset;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--dim);line-height:1.45;font-size:12.5px;text-align:center;
-  padding:6px 8px 0;min-height:2.9em;cursor:pointer}
-#hint.open{-webkit-line-clamp:unset}
+#tip{position:absolute;left:8px;right:8px;top:6px;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;
+  background:rgba(20,17,34,.72);border-radius:14px;padding:8px 12px;font-size:12.5px;line-height:1.5;color:rgba(236,230,255,.72);text-align:center;
+  animation:tipIn .5s ease-out both;z-index:2}
+#tip button{all:unset;cursor:pointer;font-size:11.5px;color:var(--cyan);opacity:.8;border-bottom:1px dashed currentColor}
+@keyframes tipIn{from{opacity:0}to{opacity:1}}
 /* bottom bar: round icon buttons, rewind in the middle */
 #bar{display:flex;justify-content:space-around;align-items:flex-end;padding:10px 4px 0}
 .ab{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;color:var(--dim);min-width:56px}
@@ -77,7 +79,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 .ab.rw:active .o{box-shadow:0 1px 0 #0d4448}
 #keys{display:none;color:#6f6890;font-size:11px;text-align:center;margin-top:8px}
 @media (pointer:fine){#keys{display:block}}
-@media (max-height:620px){#timeline{display:none} #hint{-webkit-line-clamp:1;min-height:1.45em} .ab .o{width:42px;height:42px} .ab.rw .o{width:56px;height:56px}}
+@media (max-height:620px){#timeline{display:none} .ab .o{width:42px;height:42px} .ab.rw .o{width:56px;height:56px}}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 /* overlays */
 .ov{position:absolute;inset:0;background:rgba(10,9,16,.86);display:flex;align-items:flex-end;justify-content:center;z-index:5;padding:14px;box-sizing:border-box}
@@ -126,22 +128,21 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
     </div>
     <span></span>
   </div>
-  <div id="stage"><canvas id="cv"></canvas><div id="toast"></div><div id="coach" hidden><i></i>在棋盘上滑动来移动，点自己原地等一步</div></div>
-  <button id="hint" type="button"></button>
+  <div id="stage"><canvas id="cv"></canvas><div id="toast"></div><div id="tip" hidden><span id="tipText"></span><button id="tipSolve" type="button">演示解法</button></div><div id="coach" hidden><i></i>在棋盘上滑动来移动，点自己原地等一步</div></div>
   <div id="bar">
     <button class="ab" data-c="undo" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></span>撤销</button>
     <button class="ab" data-c="wait" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/></svg></span>等待</button>
-    <button class="ab rw" data-c="rewind" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2.5 12zM21.5 6v12L13 12z"/></svg></span>回溯</button>
+    <button class="ab rw" data-c="rewind" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2.5 12zM21.5 6v12L13 12z"/></svg></span>留影</button>
     <button class="ab" data-c="retry" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></span>重走</button>
-    <button class="ab" data-c="solve" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><span id="solveBtn">提示</span></button>
+    <button class="ab" data-c="solve" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span>提示</button>
   </div>
-  <div id="keys">键盘：方向键/WASD 移动 · 空格 等待 · R 回溯 · Z 撤销 · X 重走 · Esc 清空影子</div>
+  <div id="keys">键盘：方向键/WASD 移动 · 空格 等待 · R 留影 · Z 撤销 · X 重走 · Esc 清空影子</div>
 
   <div class="ov" id="titleOv">
     <div class="wrap">
       <div class="sub">一个和过去的自己合作的解谜游戏</div>
       <h1>昨日的我</h1>
-      <p>你可以把时间倒回这一关的开头。<br>刚才的你会变成<b>影子</b>，把你按过的每个键原样再按一遍。<br>他不知道你在想什么，他只会照做。</p>
+      <p>按下<b>「留影」</b>，这一轮的你会留下来，变成<b>影子</b>；你自己回到起点，重新出发。<br>影子会把你按过的每个键原样再按一遍。他不知道你在想什么，他只会照做。</p>
       <div class="legend">
         <span class="sw" style="background:var(--amber)"></span><span>压力板：有人或箱子踩住时，同色的门打开</span>
         <span class="sw" style="background:repeating-linear-gradient(45deg,var(--sky) 0 3px,transparent 3px 6px);outline:1px solid var(--sky)"></span><span>反向门（斜纹）：同色板被踩住时反而关上</span>
@@ -217,104 +218,54 @@ function simulate(g,recs,cur){
 }
 
 const LEVELS=[
-{name:'回声',cap:1,hint:'压力板被踩住时，同色的门才会打开。先走到压力板上，然后按 R 回溯——上一轮的你会变成影子，替你踩住它。',
-map:["##########",
-     "#S...#####",
-     "#....#...#",
-     "#.a..A.E.#",
-     "#....#...#",
-     "##########"],
+{name:"回声",cap:1,hint:"站上压力板，然后按「留影」。留下的影子会替你一直站在那里。",
+map:["##########","#S...#####","#....#...#","#.a..A.E.#","#....#...#","##########"],
 sol:["DDR","DDRRRRRR"]},
-{name:'接力',cap:2,hint:'影子也能走过别的影子替它打开的门。一层一层叠上去。',
-map:["############",
-     "#S...#.....#",
-     "#....A..b..#",
-     "#.a..#.....#",
-     "#....###B###",
-     "#....#.....#",
-     "######..E..#",
-     "############"],
+{name:"接力",cap:2,hint:"影子也能走过别的影子替它打开的门。",
+map:["############","#S...#.....#","#....A..b..#","#.a..#.....#","#....###B###","#....#.....#","######..E..#","############"],
 sol:["DDR","DRRRRRRR","DRRRRRRRDDDD"]},
-{name:'时机',cap:1,hint:'虚线门是「反向门」：同色压力板被踩住时，它反而会关上。按空格原地等待。',
-map:["############",
-     "#....#.....#",
-     "#aS..1.....#",
-     "#....####A##",
-     "#....#...E.#",
-     "############"],
+{name:"时机",cap:1,hint:"斜纹门在同色板被踩住时会关上。别让影子太早踩上去，点自己可以原地等一步。",
+map:["############","#....#.....#","#aS..1.....#","#....####A##","#....#...E.#","############"],
 sol:["WWWL","RRRRRRRDD"]},
-{name:'搬运',cap:1,hint:'箱子也能压住压力板。只有一个影子名额，好好利用它。',
-map:["############",
-     "#S......####",
-     "#..o....A..#",
-     "#.......##B#",
-     "#.a...b.##E#",
-     "############"],
+{name:"搬运",cap:1,hint:"箱子也能压住压力板。",
+map:["############","#S......####","#..o....A..#","#.......##B#","#.a...b.##E#","############"],
 sol:["RRRRRDDD","RRRDLULDDURRRRRRRRDD"]},
-{name:'游行',cap:3,hint:'三道门，三块压力板，每块都藏在前一道门后面。',
-map:["###############",
-     "#S..#...#...#E#",
-     "#...A...B...C.#",
-     "#.a.#.b.#.c.#.#",
-     "###############"],
-sol:["DDR","DRRRRRD","DRRRRRRRRRD","DRRRRRRRRRRRRU"]},
-{name:'你先走',cap:1,hint:'影子只会重复你按过的键——哪怕当时你撞在了关着的门上。',
-map:["############",
-     "#S.....B..a#",
-     "#..b...#####",
-     "#......#...#",
-     "#......A.E.#",
-     "############"],
+{name:"你先走",cap:1,hint:"影子只重复按键。录的时候撞在关着的门上也没关系，下一轮门开了，他就走过去了。",
+map:["############","#S.....B..a#","#..b...#####","#......#...#","#......A.E.#","############"],
 sol:["RRRRRRRRRRRR","RRDWWWDDRRRRRR"]},
-{name:'放手',cap:2,hint:'有时候，帮忙的方式是及时松开。',
-map:["#############",
-     "#S...#...#..#",
-     "#....A...1..#",
-     "#.a..#...#.b#",
-     "#....#...##B#",
-     "#....######E#",
-     "#############"],
+{name:"节拍",cap:1,hint:"一个影子，先后踩两块板。数一数你走到每扇门要几步。",
+map:["##################","#....#############","#.S..1..A..2..B.E#","#....#############","#a..b#############","##################"],
+sol:["DDWLWWRRWR","RRRRRRRRRRRRRR"]},
+{name:"放手",cap:2,hint:"有时候，帮忙的方式是及时离开。",
+map:["#############","#S...#...#..#","#....A...1..#","#.a..#...#.b#","#....#...##B#","#....######E#","#############"],
 sol:["DDRWWU","DRRRRRRRRRRD","DRRRRRRRRRRDDD"]},
-{name:'交接班',cap:2,hint:'三块压力板，两个影子。总有人得身兼两职。',
-map:["################",
-     "#S..#.....#....#",
-     "#...A..b..B....#",
-     "#.a.#.....#....#",
-     "#...#.######C###",
-     "#####c######.E.#",
-     "################"],
+{name:"交接班",cap:2,hint:"三块板，两个影子。总有一个要踩完这块再去踩那块。",
+map:["################","#S..#.....#....#","#...A..b..B....#","#.a.#.....#....#","#...#.######C###","#####c######.E.#","################"],
 sol:["DDR","DRRRRRRWWWLLDDD","DRRRRRRRRRRRDWDDR"]},
-{name:'绕路',cap:3,hint:'反向门后面的那块板，只有在没人踩着同色板时才进得去。',
-map:["################",
-     "#S..#.....#....#",
-     "#...A..b..B..c.#",
-     "#.a.#.....#....#",
-     "########2##C####",
-     "#######.d##.D.E#",
-     "################"],
+{name:"推过去",cap:1,hint:"箱子在你进不去的地方，让影子替你推。",
+map:["##############","#S..C..o....a#","#...#.b......#","#.c.##########","#...A...B..E.#","##############"],
+sol:["WRRRRRRRRRRDLLLLL","DDRWDRWWWWRRRRWWRRRR"]},
+{name:"开门的人",cap:2,hint:"先想清楚：哪个影子要先录？",
+map:["#############","#S....C....a#","#..c..#######","#.....#.....#","#.....A..b..#","#.....#.....#","##########B##","#########.E.#","#############"],
+sol:["DRRWWDDRRWRRRR","RRRRRRRRRR","DDDRRRRWWWRRRRRDDD"]},
+{name:"绕路",cap:3,hint:"反向门后面那块板，要趁同色板没人踩的时候进去。",
+map:["################","#S..#.....#....#","#...A..b..B..c.#","#.a.#.....#....#","########2##C####","#######.d##.D.E#","################"],
 sol:["DDR","DRRRRRRWWWDRDD","DRRRRRRRRRRRR","DRRRRRRRRRRDDDRRR"]},
-{name:'我们',cap:4,hint:'四个你，一起走出去。',
-map:["###################",
-     "#S..#..#..#...#...#",
-     "#...A..1..B...C...#",
-     "#.a.#..#.b#.c.#..d#",
-     "################D##",
-     "###############.E.#",
-     "###################"],
-sol:["DDRWU","DRRRRRRRRD","DRRRRRRRRRRRD","DRRRRRRRRRRRRRRRRD","DRRRRRRRRRRRRRRRDDD"]},
-{name:"节拍",cap:1,hint:"两扇反向门，一个影子。什么时候踩上去、什么时候离开，都要掐准。",
-map:["##################", "#....#############", "#.S..1..A..2..B.E#", "#....#############", "#a..b#############", "##################"],
-sol:["DDWLWWRRWR", "RRRRRRRRRRRRRR"]},
-{name:"推过去",cap:1,hint:"箱子在你进不去的地方。那就让过去的你替你推。",
-map:["##############", "#S..C..o....a#", "#...#.b......#", "#.c.##########", "#...A...B..E.#", "##############"],
-sol:["WRRRRRRRRRRDLLLLL", "DDRWDRWWWWRRRRWWRRRR"]},
-{name:"开门的人",cap:2,hint:"过去的你要等你开门，你也要等过去的你开门。先录哪一个？",
-map:["#############", "#S....C....a#", "#..c..#######", "#.....#.....#", "#.....A..b..#", "#.....#.....#", "##########B##", "#########.E.#", "#############"],
-sol:["DRRWWDDRRWRRRR", "RRRRRRRRRR", "DDDRRRRWWWRRRRRDDD"]},
+{name:"往返",cap:1,hint:"同一块板，要踩上、离开、再踩上。",
+map:["##################","#...S...##########","#.......A.1.B.A.E#","#a.....b##########","##################"],
+sol:["DDLLLRRRRRRLLLLLLUU","DRRRRWWRRRRWWWWRRRR"]},
+{name:"三件事",cap:1,hint:"你得先帮影子开门，影子才能帮你。",
+map:["################","#S..C...a....b.#","#...#..........#","#.c.############","#...1...A...B.E#","################"],
+sol:["WRRRWWRRRRRRRRR","DDRDRRRRRRWRRRRRR"]},
+{name:"互为钥匙",cap:2,hint:"两个影子都要别人开门才进得去。从你自己能做的那一步开始。",
+map:["#################","#S..C..d.....b..#","#...#...........#","#.c.#############","#...D.....a.....#","#...#...........#","#...#############","#...A.....B...E.#","#################"],
+sol:["WRRRRRRWWWWWWRRRRRR","WDDDRRRRRRRRR","DDRUUDDDDDDRRRRRRRRRRRR"]},
 {name:"告别",cap:3,hint:"最后一关。学过的都用上。",
-map:["######################", "#S..C..o....a#########", "#...#.b......#########", "#.c.##################", "#...A...B..2...C..D.E#", "#################d####", "######################"],
-sol:["DDR", "RRRRRRRRRRDLLLLLWWWWU", "DDDRRWWWWWWWWWWRRRRRRRRRRRRRRD", "DDDRRWWWWWWWWWWRRRRRRRRRRRRRRRRR"]}
+map:["######################","#S..C..o....a#########","#...#.b......#########","#.c.##################","#...A...B..2...C..D.E#","#################d####","######################"],
+sol:["DDR","RRRRRRRRRRDLLLLLWWWWU","DDDRRWWWWWWWWWWRRRRRRRRRRRRRRD","DDDRRWWWWWWWWWWRRRRRRRRRRRRRRRRR"]}
 ];
+// level order before 2026-11-18 (save data used index keys)
+const OLD_ORDER=["回声","接力","时机","搬运","游行","你先走","放手","交接班","绕路","我们","节拍","推过去","开门的人","告别"];
 
 (function(){
 'use strict';
@@ -324,7 +275,10 @@ const GHOST_COL=['#5ee6e6','#ff7ac8','#c4f05a','#ffd36b'];
 const PLATE_COL={a:'#f2a33a',b:'#4fc3f7',c:'#b388ff',d:'#7ee081'};
 const MOVE_MS=115;
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let progress=store.get('zuori-progress',{solved:{}});
+let progress=store.get('zuori-progress2',null);
+if(!progress){progress={solved:{}};const old=store.get('zuori-progress',{solved:{}});
+  for(const k in old.solved){const n=OLD_ORDER[+k];if(n)progress.solved[n]=old.solved[k];}}
+function maxOpenIdx(){let i=0;while(i<LEVELS.length-1&&progress.solved[LEVELS[i].name])i++;return i;}
 let muted=store.get('zuori-muted',false);
 
 // ---------- audio ----------
@@ -391,11 +345,10 @@ function wantRot(){const st=$('stage');const w=st.clientWidth,h=st.clientHeight;
 function applyRot(r){if(r===rot)return;rot=r;ghosts=ghosts.map(swapArr);cur=swapArr(cur);queue=[];anim=null;facing=[];
   g=parseLevel(levelView());recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);buf.width=g.W*TS;buf.height=g.H*TS;}
 function loadLevel(i,keep){li=i;L=LEVELS[i];rot=wantRot();g=parseLevel(levelView());ghosts=[];cur=[];won=false;winShown=false;queue=[];rewinding=null;autoplay=null;particles=[];
-  $('solveBtn').textContent='提示';solveArm=false;
-  recompute(true);doorOpen=frames[0].doors.slice().map(v=>v?1:0);
+    recompute(true);doorOpen=frames[0].doors.slice().map(v=>v?1:0);
   buf.width=g.W*TS;buf.height=g.H*TS;resize();
   $('lvname').innerHTML='<small>第 '+(i+1)+' 关</small>'+L.name;
-  $('hint').innerHTML=L.hint;$('coach').hidden=!!store.get('zuori-coached',false);
+  $('tip').hidden=true;$('coach').hidden=!!store.get('zuori-coached',false);
   hideOv();toast('第 '+(i+1)+' 关 · '+L.name,1400);
   store.set('zuori-last',i);
 }
@@ -429,7 +382,7 @@ function sfxDiff(f0,f1){const pe=f1.ev[f1.ev.length-1];
   if(pr)SFX.press();else if(rl)SFX.release();
   let op=0,cl=0;f1.doors.forEach((d,i)=>{if(d&&!f0.doors[i])op++;if(!d&&f0.doors[i])cl++;});if(op)SFX.open();else if(cl)SFX.close();}
 function rewind(){ if(won||rewinding)return;
-  if(!cur.length){toast('先走几步，再回溯');SFX.deny();return;}
+  if(!cur.length){toast('先走几步，再留影');SFX.deny();return;}
   if(ghosts.length>=L.cap){toast('这一关最多 '+L.cap+' 个影子。按 X 重走这一轮，或 Esc 清空影子');SFX.deny();shake=6;return;}
   const fr=frames.slice();const ms=Math.min(1100,250+fr.length*45);
   if(fast){finishRewind();return;}
@@ -439,13 +392,15 @@ function finishRewind(){ghosts.push(cur.slice());cur=[];rewinding=null;recompute
   const left=L.cap-ghosts.length;toast('影子 '+ghosts.length+' 出发了'+(left?'':' · 名额用完，这一轮要走到终点'));}
 function undo(){ if(rewinding||autoplay)return; if(won){won=false;winShown=false;}
   if(cur.length){cur.pop();recompute(true);}
-  else if(ghosts.length){cur=ghosts.pop();recompute(true);toast('撤回了上一次回溯');}
+  else if(ghosts.length){cur=ghosts.pop();recompute(true);toast('撤回了上一次留影');}
   queue=[];}
 function retry(){if(rewinding||autoplay)return;cur=[];won=false;winShown=false;recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);queue=[];toast('重走这一轮，影子还在');}
 function resetAll(){if(rewinding)return;autoplay=null;ghosts=[];cur=[];won=false;winShown=false;recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);queue=[];toast('影子全部清空');}
-let solveArm=false;
-function solve(){ if(!solveArm){solveArm=true;$('solveBtn').textContent='再点播放';toast('再点一次「提示」，自动演示这一关的解法');setTimeout(()=>{solveArm=false;$('solveBtn').textContent='提示';},3000);return;}
-  solveArm=false;$('solveBtn').textContent='提示';resetAll();autoplay={loop:0,i:0,next:performance.now()+400,driving:false};}
+let tipT=null;
+function solve(){const t=$('tip');$('tipText').textContent=L.hint;t.hidden=false;t.style.animation='none';void t.offsetWidth;t.style.animation='';
+  clearTimeout(tipT);tipT=setTimeout(()=>{t.hidden=true;},8000);}
+function playSolution(){$('tip').hidden=true;resetAll();autoplay={loop:0,i:0,next:performance.now()+400,driving:false};}
+$('tipSolve').onclick=e=>{e.stopPropagation();playSolution();};
 function tickAutoplay(now){ if(!autoplay||rewinding||now<autoplay.next)return;
   const s=solSeq(autoplay.loop);
   if(autoplay.i<s.length){autoplay.driving=true;doAct(s[autoplay.i++]);autoplay.driving=false;autoplay.next=now+MOVE_MS+70;if(won)autoplay=null;}
@@ -471,7 +426,6 @@ document.querySelectorAll('#dpad [data-a]').forEach(bt=>{let iv=null;const a=bt.
   bt.addEventListener('pointerdown',e=>{e.preventDefault();act(a);stop();iv=setInterval(()=>act(a),170);});
   ['pointerup','pointerleave','pointercancel'].forEach(ev=>bt.addEventListener(ev,stop));});
 document.querySelectorAll('[data-c]').forEach(bt=>bt.addEventListener('click',()=>{({wait:()=>act('W'),rewind,undo,retry,reset:resetAll,solve})[bt.dataset.c]();if(bt.dataset.c==='reset')hideOv();bt.blur();}));
-$('hint').onclick=()=>$('hint').classList.toggle('open');
 let ts=null;
 const stg=$('stage');
 stg.addEventListener('pointerdown',e=>{ts={x:e.clientX,y:e.clientY,id:e.pointerId};});
@@ -488,13 +442,13 @@ function coachDone(){if(!$('coach').hidden){$('coach').hidden=true;store.set('zu
 // ---------- overlays ----------
 function hideOv(){['titleOv','selOv','winOv'].forEach(id=>$(id).hidden=true);}
 function showSel(){hideOv();const gr=$('grid');gr.innerHTML='';
-  const maxOpen=Math.max(0,...Object.keys(progress.solved).map(k=>+k+1));
-  LEVELS.forEach((lv,i)=>{const bt=document.createElement('button');bt.type='button';const done=progress.solved[i];
+  const maxOpen=maxOpenIdx();
+  LEVELS.forEach((lv,i)=>{const bt=document.createElement('button');bt.type='button';const done=progress.solved[lv.name];
     bt.className='lv'+(done?' done':'');bt.disabled=i>maxOpen;
     bt.innerHTML='<span>'+(i+1)+'</span>'+lv.name+'<small>'+(done?'✓ '+done.steps+' 步':i>maxOpen?'未解锁':lv.cap+' 个影子')+'</small>';
     bt.onclick=()=>loadLevel(i);gr.appendChild(bt);});
   $('selOv').hidden=false;}
-$('startBtn').onclick=()=>{ac();const last=store.get('zuori-last',0);const maxOpen=Math.max(0,...Object.keys(progress.solved).map(k=>+k+1));loadLevel(Math.min(last,maxOpen,LEVELS.length-1));};
+$('startBtn').onclick=()=>{ac();const last=store.get('zuori-last',0);const maxOpen=maxOpenIdx();loadLevel(Math.min(last,maxOpen,LEVELS.length-1));};
 $('selBtn').onclick=()=>{ac();showSel();};
 $('menuBtn').onclick=showSel;$('selClose').onclick=()=>{hideOv();};
 $('againBtn').onclick=()=>loadLevel(li);$('winSel').onclick=showSel;
@@ -504,7 +458,7 @@ $('muteBtn').onclick=toggleMute;$('muteBtn').textContent='声音：'+(muted?'关
 
 function onWin(){autoplay=autoplay&&autoplay.loop<L.sol.length?autoplay:null;
   const steps=ghosts.reduce((s,r)=>s+r.length,0)+cur.length;
-  const prev=progress.solved[li];if(!prev||steps<prev.steps)progress.solved[li]={steps};store.set('zuori-progress',progress);
+  const prev=progress.solved[L.name];if(!prev||steps<prev.steps)progress.solved[L.name]={steps};store.set('zuori-progress2',progress);
   if(fast)return;
   SFX.win();burst(g.exit.x,g.exit.y,'#ffffff',40);ghosts.forEach((_,i)=>{const p=curFrame().a[i];burst(p.x,p.y,GHOST_COL[i],14);});
   setTimeout(()=>{if(!won)return;winShown=true;const last=li===LEVELS.length-1;
@@ -610,7 +564,7 @@ function render(now){
     for(let s=0;s<strips;s++){const off=(Math.random()-.5)*6;ctx.drawImage(buf,0,s*h,buf.width,h,off*scale,s*h*scale,cv.width,h*scale);}
     ctx.fillStyle='rgba(94,230,230,.12)';ctx.fillRect(0,0,cv.width,cv.height);
     ctx.fillStyle='rgba(0,0,0,.25)';for(let y=0;y<cv.height;y+=Math.max(2,Math.round(scale)*2))ctx.fillRect(0,y,cv.width,Math.max(1,Math.round(scale)));
-    ctx.fillStyle='#5ee6e6';ctx.font='bold '+Math.round(8*scale)+'px ui-monospace,monospace';ctx.textBaseline='top';ctx.fillText('◀◀ 回溯',6*scale,4*scale);
+    ctx.fillStyle='#5ee6e6';ctx.font='bold '+Math.round(8*scale)+'px ui-monospace,monospace';ctx.textBaseline='top';ctx.fillText('◀◀ 留影',6*scale,4*scale);
   }else ctx.drawImage(buf,sx,sy,cv.width,cv.height);
 }
 function occupied(F,x,y){return F.a.some(q=>q.x===x&&q.y===y)||F.boxes.some(q=>q.x===x&&q.y===y);}
@@ -620,7 +574,7 @@ function toast(msg,ms=2200){const t=$('toast');t.textContent=msg;t.classList.add
 
 // test hook
 window.__game={LEVELS,load:i=>{loadLevel(i);},setFast:v=>{fast=v;},act:a=>doAct(rot?SW[a]:a),rotated:()=>rot,screenPos:()=>{const p=curFrame().a.at(-1);return {x:p.x,y:p.y,W:g.W,H:g.H};},rewind:()=>rewind(),
-  state:()=>({level:li,won,ghosts:ghosts.length,steps:cur.length,player:curFrame().a.at(-1)}),showSel,hideOv,solve:()=>{solveArm=true;solve();}};
+  state:()=>({level:li,won,ghosts:ghosts.length,steps:cur.length,player:curFrame().a.at(-1)}),showSel,hideOv,solve:()=>playSolution()};
 
 // boot: draw level 1 behind the title card
 loadLevel(Math.min(store.get('zuori-last',0),LEVELS.length-1));$('titleOv').hidden=false;
