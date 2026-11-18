@@ -41,7 +41,10 @@ button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-
 .ico.sm svg{width:18px;height:18px}
 .ico{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:none;cursor:pointer;display:grid;place-items:center}
 .ico svg{width:20px;height:20px}
-#lvchip{font-size:12px;color:var(--dim);letter-spacing:.08em;padding-left:4px;white-space:nowrap}
+#lvchip{font-size:12px;color:var(--dim);letter-spacing:.06em;padding-left:4px;white-space:nowrap;display:flex;flex-direction:column;gap:1px;line-height:1.25}
+#lvchip b{color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:0}
+#lvchip .goal{font-size:11px;letter-spacing:0}
+#lvchip .goal.s3{color:var(--amber)}
 /* hint bulb floats on the board's top-right corner, just under the capsule */
 #hintBtn{position:absolute;top:2px;right:2px;z-index:2;background:rgba(20,17,34,.6)}
 /* level name: fades in over the board when a level starts, then goes away */
@@ -111,6 +114,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 .lv small{color:var(--dim);font-size:10.5px}
 .lv.done{border-color:#4f8f56}
 .lv.done small{color:var(--mint)}
+.lv small.rec{color:var(--dim);font-size:10px;white-space:nowrap}
 .lv:disabled{opacity:.35;cursor:not-allowed}
 #winOv{background:rgba(10,9,16,.62);align-items:center}
 #helpList{display:flex;flex-direction:column;gap:10px}
@@ -127,9 +131,9 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 #stars i:nth-child(2){width:52px;height:52px}
 #stars i.on{background:linear-gradient(180deg,#fff3a8,#f2a33a);animation:starpop .45s cubic-bezier(.2,1.8,.4,1) both;filter:drop-shadow(0 0 10px rgba(242,163,58,.6))}
 @keyframes starpop{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
-#winStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#winStats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 #winStats div{background:var(--bg);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;gap:2px}
-#winStats b{font-size:22px;font-variant-numeric:tabular-nums}
+#winStats b{font-size:20px;font-variant-numeric:tabular-nums}
 #winStats span{font-size:11px;color:var(--dim)}
 #newRec{align-self:center;font-size:12px;color:#1a1426;background:var(--amber);border-radius:999px;padding:3px 10px;animation:pop .4s .9s cubic-bezier(.2,1.6,.4,1) both}
 #winP{font-size:13.5px}
@@ -149,7 +153,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 <div id="app">
   <div id="top">
     <div id="topL"><button class="ico" id="menuBtn" type="button" aria-label="菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <button class="ico" id="helpBtn" type="button" aria-label="帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2v.6"/><path d="M12 18.2v.1"/></svg></button><span id="lvchip">第 1 关</span></div>
+    <button class="ico" id="helpBtn" type="button" aria-label="帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2v.6"/><path d="M12 18.2v.1"/></svg></button><span id="lvchip"></span></div>
   </div>
   <div id="stage"><canvas id="cv"></canvas><button class="ico sm" id="hintBtn" data-c="solve" type="button" aria-label="提示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button><div id="intro"></div><div id="toast"></div><div id="tip" hidden><span id="tipText"></span><button id="tipSolve" type="button">演示解法</button></div><div id="coach" hidden><i></i>在棋盘上滑动来移动，点自己原地等一步</div></div>
   <div id="bar">
@@ -201,7 +205,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
       <div id="winKicker">第 1 关 · 回声</div>
       <h2 id="winT">通关！</h2>
       <div id="stars" aria-label="星级"><i></i><i></i><i></i></div>
-      <div id="winStats"><div><b id="wsSteps">0</b><span>总步数</span></div><div><b id="wsGhosts">0</b><span>用了分身</span></div><div><b id="wsPar">0</b><span>三星步数</span></div></div>
+      <div id="winStats"><div><b id="wsSteps">0</b><span>总步数</span></div><div><b id="wsTime">0:00</b><span>用时</span></div><div><b id="wsGhosts">0</b><span>用了分身</span></div><div><b id="wsPar">0</b><span>三星步数</span></div></div>
       <div id="newRec" hidden>新纪录</div>
       <p id="winP"></p>
       <div class="row"><button class="btn pri" id="nextBtn" type="button">下一关</button></div>
@@ -317,6 +321,11 @@ const PLATE_COL={a:'#f2a33a',b:'#4fc3f7',c:'#b388ff',d:'#7ee081'};
 const MOVE_MS=115;
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 let progress=store.get('zuori-progress2',null);
+let playMs=0,playT0=0;
+function clockStart(){playMs=0;playT0=document.hidden?0:performance.now();}
+function clockNow(){return playMs+(playT0?performance.now()-playT0:0);}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(playT0){playMs+=performance.now()-playT0;playT0=0;}}else if(!playT0)playT0=performance.now();});
+function fmtTime(ms){const t=Math.round(ms/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
 if(!progress){progress={solved:{}};const old=store.get('zuori-progress',{solved:{}});
   for(const k in old.solved){const n=OLD_ORDER[+k];if(n)progress.solved[n]=old.solved[k];}}
 function maxOpenIdx(){let i=0;while(i<LEVELS.length-1&&progress.solved[LEVELS[i].name])i++;return i;}
@@ -408,7 +417,7 @@ function applyRot(r){if(r===rot)return;rot=r;ghosts=ghosts.map(swapArr);cur=swap
 function loadLevel(i,keep){li=i;L=LEVELS[i];rot=wantRot();g=parseLevel(levelView());ghosts=[];cur=[];won=false;winShown=false;queue=[];rewinding=null;autoplay=null;particles=[];
     recompute(true);doorOpen=frames[0].doors.slice().map(v=>v?1:0);
   buf.width=g.W*TS;buf.height=g.H*TS;calcView();resize();
-  $('lvchip').textContent='第 '+(i+1)+' 关';
+  clockStart();
   $('tip').hidden=true;$('coach').hidden=!!store.get('zuori-coached',false);
   hideOv();{const it=$('intro');it.innerHTML='<small>第 '+(i+1)+' 关</small>'+L.name;it.classList.remove('show');void it.offsetWidth;it.classList.add('show');}
   store.set('zuori-last',i);
@@ -421,6 +430,10 @@ function curFrame(){return frames[frames.length-1];}
 
 function updateHud(){
   const left=L.cap-ghosts.length;$('rwLeft').textContent=left;$('rwBtn').classList.toggle('empty',left<=0);
+  // steps so far (shadows' rounds + this round) and how many the next star allows
+  const n=ghosts.reduce((t,r)=>t+r.length,0)+cur.length,par=parOf(L),p2=Math.ceil(par*1.35)+2;
+  const goal=n<=par?'<span class="goal s3">★★★ ≤ '+par+' 步</span>':n<=p2?'<span class="goal">★★ ≤ '+p2+' 步</span>':'<span class="goal">★</span>';
+  $('lvchip').innerHTML='<span>第 '+(li+1)+' 关 · <b>'+n+'</b> 步</span>'+goal;
 }
 
 // ---------- input ----------
@@ -501,7 +514,7 @@ function showSel(){hideOv();const gr=$('grid');gr.innerHTML='';
   const maxOpen=maxOpenIdx();
   LEVELS.forEach((lv,i)=>{const bt=document.createElement('button');bt.type='button';const done=progress.solved[lv.name];
     bt.className='lv'+(done?' done':'');bt.disabled=i>maxOpen;
-    bt.innerHTML='<span>'+(i+1)+'</span>'+lv.name+(done?'<small class="st">'+'★'.repeat(done.stars||1)+'☆'.repeat(3-(done.stars||1))+'</small>':'<small>'+(i>maxOpen?'未解锁':lv.cap+' 个影子')+'</small>');
+    bt.innerHTML='<span>'+(i+1)+'</span>'+lv.name+(done?'<small class="st">'+'★'.repeat(done.stars||1)+'☆'.repeat(3-(done.stars||1))+'</small><small class="rec">'+done.steps+'步'+(done.ms!=null?' · '+fmtTime(done.ms):'')+'</small>':'<small>'+(i>maxOpen?'未解锁':lv.cap+' 个影子')+'</small>');
     bt.onclick=()=>loadLevel(i);gr.appendChild(bt);});
   $('selOv').hidden=false;}
 $('startBtn').onclick=()=>{ac();const last=store.get('zuori-last',0);const maxOpen=maxOpenIdx();loadLevel(Math.min(last,maxOpen,LEVELS.length-1));};
@@ -525,11 +538,12 @@ $('muteBtn').onclick=toggleMute;$('muteBtn').textContent='声音：'+(muted?'关
 // ---------- win celebration ----------
 function parOf(lv){return lv.sol.reduce((n,x)=>n+x.length,0);}
 function starsFor(lv,steps){const par=parOf(lv);return steps<=par?3:steps<=Math.ceil(par*1.35)+2?2:1;}
-let celeT0=0,winTimer=null,winAnim=[];
+let celeT0=0,winTimer=null,winAnim=[],lastMs=0;
 function onWin(){autoplay=autoplay&&autoplay.loop<L.sol.length?autoplay:null;
   const steps=ghosts.reduce((s,r)=>s+r.length,0)+cur.length;const stars=starsFor(L,steps);
-  const prev=progress.solved[L.name];const rec=!prev||steps<prev.steps;
-  progress.solved[L.name]={steps:rec?steps:prev.steps,stars:Math.max(stars,prev&&prev.stars||0)};store.set('zuori-progress2',progress);
+  const ms=clockNow();const prev=progress.solved[L.name];const rec=!prev||steps<prev.steps||(prev.ms==null||ms<prev.ms);
+  progress.solved[L.name]={steps:prev?Math.min(steps,prev.steps):steps,stars:Math.max(stars,prev&&prev.stars||0),ms:prev&&prev.ms!=null?Math.min(ms,prev.ms):ms};store.set('zuori-progress2',progress);
+  lastMs=ms;
   if(fast)return;
   const last=li===LEVELS.length-1;celeT0=performance.now();
   SFX.win();vibrate(last?[30,50,30,50,30,50,120]:[25,40,25,40,70]);
@@ -540,7 +554,7 @@ function showWin(steps,stars,prev,rec,last){if(!won||winShown)return;winShown=tr
   const ov=$('winOv');ov.classList.remove('skip');ov.classList.toggle('finale',last);
   $('winKicker').textContent='第 '+(li+1)+' 关 · '+L.name;
   $('winT').textContent=last?'全部通关！':['','过关','漂亮！','完美！'][stars];
-  $('wsGhosts').textContent=ghosts.length;$('wsPar').textContent=parOf(L);$('wsSteps').textContent='0';
+  $('wsGhosts').textContent=ghosts.length;$('wsTime').textContent=fmtTime(lastMs);$('wsPar').textContent=parOf(L);$('wsSteps').textContent='0';
   $('newRec').hidden=!(rec&&prev);
   const total=LEVELS.reduce((n,lv)=>n+(progress.solved[lv.name]?.stars||0),0);
   $('winP').innerHTML=last?['所有的你，同一条路，同一个出口。','谢谢你陪过去的自己走完这一程。','一共收集了 <b>'+total+'</b> / '+LEVELS.length*3+' 颗星。','<i id="skipHint">点卡片可以跳过动画</i>'].map((t,i)=>'<span style="animation-delay:'+(0.9+i*0.6)+'s">'+t+'</span>').join('')
