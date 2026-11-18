@@ -15,6 +15,17 @@ const url='file://'+path.resolve(__dirname,'../index.html');const shots=path.res
   await pg.setViewportSize({width:390,height:844});await pg.waitForTimeout(400);
   const fr=await pg.evaluate(()=>{const G=window.__game;const S=G.LEVELS[13].sol;const after=G.rotated();for(const c of S[2].slice(12))G.act(c);G.rewind();for(const c of S[3])G.act(c);return [after,G.state().won];});
   console.log('中途转屏：',flip?'竖排':'横排','→',fr[0]?'竖排':'横排',fr[1]?'通关':'失败');if(!fr[1]||flip===fr[0])ok=false;
+  // touch controls: swipe on the board moves, tapping yourself waits
+  await pg.evaluate(()=>{const G=window.__game;G.setFast(false);G.load(0);});await pg.waitForTimeout(300);
+  const box=await pg.locator('#cv').boundingBox();const cx=box.x+box.width/2,cy=box.y+box.height/2;
+  const p0=await pg.evaluate(()=>window.__game.state());
+  await pg.mouse.move(cx,cy);await pg.mouse.down();await pg.mouse.move(cx,cy+60,{steps:4});await pg.mouse.up();await pg.waitForTimeout(250);
+  const p1=await pg.evaluate(()=>window.__game.state());
+  const sp=await pg.evaluate(()=>{const G=window.__game;return G.screenPos();});
+  await pg.mouse.click(box.x+(sp.x+.5)*box.width/sp.W,box.y+(sp.y+.5)*box.height/sp.H);await pg.waitForTimeout(250);
+  const p2=await pg.evaluate(()=>window.__game.state());
+  const touchOk=p1.steps===1&&(p1.player.x!==p0.player.x||p1.player.y!==p0.player.y)&&p2.steps===2&&p2.player.x===p1.player.x&&p2.player.y===p1.player.y;
+  console.log('滑动移动 + 点自己等待：',touchOk?'正常':'异常',JSON.stringify([p0.player,p1.player,p2.player]));if(!touchOk)ok=false;
   // screenshots mid-play
   async function setup(i,loops,steps){await pg.evaluate(([i,loops,steps])=>{const G=window.__game;G.setFast(true);G.load(i);const S=G.LEVELS[i].sol;
     for(let k=0;k<loops;k++){for(const c of S[k])G.act(c);G.rewind();}for(const c of S[loops].slice(0,steps))G.act(c);G.setFast(false);},[i,loops,steps]);await pg.waitForTimeout(2300);}
