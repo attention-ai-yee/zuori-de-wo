@@ -22,7 +22,7 @@ const url='file://'+path.resolve(__dirname,'../index.html');const shots=path.res
   await pg.mouse.move(cx,cy);await pg.mouse.down();await pg.mouse.move(cx,cy+60,{steps:4});await pg.mouse.up();await pg.waitForTimeout(250);
   const p1=await pg.evaluate(()=>window.__game.state());
   const sp=await pg.evaluate(()=>{const G=window.__game;return G.screenPos();});
-  await pg.mouse.click(box.x+(sp.x+.5)*box.width/sp.W,box.y+(sp.y+.5)*box.height/sp.H);await pg.waitForTimeout(250);
+  await pg.mouse.click(box.x+sp.fx*box.width,box.y+sp.fy*box.height);await pg.waitForTimeout(250);
   const p2=await pg.evaluate(()=>window.__game.state());
   const touchOk=p1.steps===1&&(p1.player.x!==p0.player.x||p1.player.y!==p0.player.y)&&p2.steps===2&&p2.player.x===p1.player.x&&p2.player.y===p1.player.y;
   console.log('滑动移动 + 点自己等待：',touchOk?'正常':'异常',JSON.stringify([p0.player,p1.player,p2.player]));if(!touchOk)ok=false;
