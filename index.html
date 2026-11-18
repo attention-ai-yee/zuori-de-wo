@@ -76,9 +76,6 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 #bar{display:grid;grid-template-columns:1fr auto 1fr;justify-items:center;align-items:end;padding:10px 12px 0}
 .ab small{display:block;font-size:9.5px;color:#6f6890;margin-top:1px}
 .ab .o{position:relative}
-.ring{position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(var(--cyan) calc(var(--p,0)*1turn),transparent 0);
-  -webkit-mask:radial-gradient(circle,transparent 27px,#000 28px);mask:radial-gradient(circle,transparent 27px,#000 28px);opacity:0}
-#undoBtn.holding .ring{opacity:1}
 .ab{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;color:var(--dim);min-width:56px}
 .ab .o{width:48px;height:48px;border-radius:50%;background:var(--panel);box-shadow:0 3px 0 #0c0a16, inset 0 1px 0 rgba(255,255,255,.08);display:grid;place-items:center;color:var(--ink)}
 .ab svg{width:22px;height:22px}
@@ -167,7 +164,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
   <div id="bar">
     <button class="ab" data-c="wait" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/></svg></span>等待</button>
     <button class="ab rw" data-c="rewind" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2.5 12zM21.5 6v12L13 12z"/></svg></span>留影</button>
-    <button class="ab" id="undoBtn" type="button" aria-label="撤销一步，长按重走这一轮"><span class="o"><i class="ring"></i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></span><span>撤销<small>长按重走</small></span></button>
+    <button class="ab" id="retryBtn" data-c="retry" type="button" aria-label="重走这一轮"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span><span>重走</span></button>
   </div>
 
   <div class="ov" id="titleOv">
@@ -204,7 +201,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
         <div class="hl"><canvas data-icon="box"></canvas><p><b>箱子</b>：走过去就能推。推到压力板上，可以代替人踩住。</p></div>
         <div class="hl"><canvas data-icon="exit"></canvas><p><b>终点</b>：你自己走到这里就过关，影子到了不算。</p></div>
       </div>
-      <p class="hnote">顶部的菱形是这一关能用的影子数量。底部按钮：等待一步 · 留影 · 撤销（长按重走这一轮）。卡住了就点右上角的灯泡看提示。</p>
+      <p class="hnote">顶部的菱形是这一关能用的影子数量。底部按钮：等待一步 · 留影 · 重走这一轮（影子都还在）。卡住了就点右上角的灯泡看提示。</p>
       <div class="row"><button class="btn" id="helpClose" type="button">知道了</button></div>
     </div>
   </div>
@@ -475,15 +472,6 @@ function tickAutoplay(now){ if(!autoplay||rewinding||now<autoplay.next)return;
   else if(autoplay.loop<L.sol.length-1){autoplay.loop++;autoplay.i=0;rewind();autoplay.next=now+300;}
   else autoplay=null;}
 
-// undo button: tap = undo one step, hold = walk this round again
-(function(){const bt=$('undoBtn');let t0=0,raf=0,fired=false,down=false;const HOLD=600;
-  const tick=()=>{const k=Math.min(1,(performance.now()-t0)/HOLD);bt.style.setProperty('--p',k);
-    if(k>=1&&!fired){fired=true;bt.classList.remove('holding');vibrate(30);retry();return;}if(down)raf=requestAnimationFrame(tick);};
-  bt.addEventListener('pointerdown',e=>{e.preventDefault();down=true;fired=false;t0=performance.now();bt.classList.add('holding');raf=requestAnimationFrame(tick);});
-  const end=tap=>{if(!down)return;down=false;cancelAnimationFrame(raf);bt.classList.remove('holding');bt.style.setProperty('--p',0);if(tap&&!fired)undo();};
-  bt.addEventListener('pointerup',()=>end(true));bt.addEventListener('pointerleave',()=>end(false));bt.addEventListener('pointercancel',()=>end(false));
-  bt.addEventListener('contextmenu',e=>e.preventDefault());
-  bt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();undo();}});})();
 const KEYMAP={ArrowUp:'U',ArrowDown:'D',ArrowLeft:'L',ArrowRight:'R',w:'U',s:'D',a:'L',d:'R',W:'U',S:'D',A:'L',D:'R',' ':'W','.':'W'};
 document.addEventListener('keydown',e=>{
   if(!$('titleOv').hidden||!$('selOv').hidden){if(e.key==='Enter'&&!$('titleOv').hidden){$('startBtn').click();}if(e.key==='Escape')hideOv();return;}
