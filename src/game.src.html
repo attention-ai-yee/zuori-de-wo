@@ -33,12 +33,13 @@ button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-
 .ico.sm svg{width:18px;height:18px}
 .ico{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:none;cursor:pointer;display:grid;place-items:center}
 .ico svg{width:20px;height:20px}
-#lvchip{font-size:12px;color:var(--dim);letter-spacing:.06em;padding-left:4px;white-space:nowrap;display:flex;flex-direction:column;gap:1px;line-height:1.25}
+#lvchip{margin-left:auto;padding-right:4px;font-size:12px;color:var(--dim);letter-spacing:.06em;white-space:nowrap;display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.25}
+/* inside WeChat the capsule sits at the top-right, so the level info moves left of it */
+.wx #lvchip{padding-right:100px}
 #lvchip b{color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:0}
 #lvchip .goal{font-size:11px;letter-spacing:0}
 #lvchip .goal.s3{color:var(--amber)}
 /* hint bulb floats on the board's top-right corner, just under the capsule */
-#hintBtn{position:absolute;top:2px;right:2px;z-index:2;background:rgba(20,17,34,.6)}
 /* level name: fades in over the board when a level starts, then goes away */
 #intro{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;opacity:0;z-index:3;
   font-family:var(--display);font-size:34px;letter-spacing:.08em;color:var(--ink);text-shadow:0 2px 0 #0c0a16,0 0 24px rgba(0,0,0,.8);white-space:nowrap}
@@ -52,14 +53,14 @@ button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-
 /* board */
 #stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer}
 canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
-#toast{position:absolute;left:50%;top:48px;transform:translateX(-50%);background:rgba(20,17,34,.92);border:1px solid var(--line);border-radius:999px;padding:6px 14px;
+#toast{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(20,17,34,.92);border:1px solid var(--line);border-radius:999px;padding:6px 14px;
   font-size:12.5px;max-width:90%;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #toast.show{opacity:1}
 #coach{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(20,17,34,.88);border-radius:999px;
   padding:7px 14px;font-size:12.5px;color:var(--ink);pointer-events:none;white-space:nowrap}
 #coach i{display:block;width:22px;height:22px;border-radius:50%;background:var(--ink);opacity:.9;animation:swipe 1.4s ease-in-out infinite}
 @keyframes swipe{0%{transform:translateX(-10px);opacity:0}20%{opacity:.9}80%{opacity:.9}100%{transform:translateX(14px);opacity:0}}
-#tip{position:absolute;left:8px;right:8px;top:48px;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;
+#tip{position:absolute;left:8px;right:8px;top:8px;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;
   background:rgba(20,17,34,.72);border-radius:14px;padding:8px 12px;font-size:12.5px;line-height:1.5;color:rgba(236,230,255,.72);text-align:center;
   animation:tipIn .5s ease-out both;z-index:2}
 #tip button{all:unset;cursor:pointer;font-size:11.5px;color:var(--cyan);opacity:.8;border-bottom:1px dashed currentColor}
@@ -142,9 +143,10 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 <div id="app">
   <div id="top">
     <div id="topL"><button class="ico" id="menuBtn" type="button" aria-label="菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <button class="ico" id="helpBtn" type="button" aria-label="帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2v.6"/><path d="M12 18.2v.1"/></svg></button><span id="lvchip"></span></div>
+    <button class="ico" id="helpBtn" type="button" aria-label="帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2v.6"/><path d="M12 18.2v.1"/></svg></button><button class="ico" id="hintBtn" data-c="solve" type="button" aria-label="提示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button></div>
+    <div id="lvchip"></div>
   </div>
-  <div id="stage"><canvas id="cv"></canvas><button class="ico sm" id="hintBtn" data-c="solve" type="button" aria-label="提示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button><div id="intro"></div><div id="toast"></div><div id="tip" hidden><span id="tipText"></span><button id="tipSolve" type="button">演示解法</button></div><div id="coach" hidden><i></i>在棋盘上滑动来移动，点自己原地等一步</div></div>
+  <div id="stage"><canvas id="cv"></canvas><div id="intro"></div><div id="toast"></div><div id="tip" hidden><span id="tipText"></span><button id="tipSolve" type="button">演示解法</button></div><div id="coach" hidden><i></i>在棋盘上滑动来移动，点自己原地等一步</div></div>
   <div id="bar">
     <button class="ab" data-c="wait" type="button"><span class="o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/></svg></span>等待</button>
     <button class="ab rw" id="rwBtn" data-c="rewind" type="button"><span class="o"><b class="badge" id="rwLeft">0</b><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2.5 12zM21.5 6v12L13 12z"/></svg></span>留影</button>
@@ -170,7 +172,8 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
     <div class="card">
       <h2>菜单</h2>
       <div id="grid"></div>
-      <div class="row"><button class="btn sm" id="resetBtn" data-c="reset" type="button">清空本关影子</button><button class="btn sm" id="muteBtn" type="button">声音：开</button></div>
+      <div class="row"><button class="btn sm" id="musicBtn" type="button">音乐：开</button><button class="btn sm" id="muteBtn" type="button">音效：开</button></div>
+      <div class="row"><button class="btn sm" id="resetBtn" data-c="reset" type="button">清空本关影子</button></div>
       <div class="row"><button class="btn" id="selClose" type="button">继续游戏</button></div>
     </div>
   </div>
@@ -186,7 +189,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
         <div class="hl"><canvas data-icon="box"></canvas><p><b>箱子</b>：走过去就能推。推到压力板上，可以代替人踩住。</p></div>
         <div class="hl"><canvas data-icon="exit"></canvas><p><b>钻石</b>：你自己拿到钻石就过关，影子碰到不算。</p></div>
       </div>
-      <p class="hnote">「留影」按钮上的数字是这一关还能留几个影子。底部按钮：等待一步 · 留影 · 撤销一步。卡住了就点棋盘右上角的灯泡看提示。</p>
+      <p class="hnote">「留影」按钮上的数字是这一关还能留几个影子。底部按钮：等待一步 · 留影 · 撤销一步。卡住了就点左上角的灯泡看提示。</p>
       <div class="row"><button class="btn" id="helpClose" type="button">知道了</button></div>
     </div>
   </div>
@@ -226,6 +229,7 @@ if(!progress){progress={solved:{}};const old=store.get('zuori-progress',{solved:
   for(const k in old.solved){const n=OLD_ORDER[+k];if(n)progress.solved[n]=old.solved[k];}}
 function maxOpenIdx(){let i=0;while(i<LEVELS.length-1&&progress.solved[LEVELS[i].name])i++;return i;}
 let muted=store.get('zuori-muted',false);
+if(/MicroMessenger|miniGame/i.test(navigator.userAgent))document.documentElement.classList.add('wx');
 
 // ---------- audio ----------
 // iOS only lets a page start sound from inside a touch. So on every touch until audio is confirmed running we:
@@ -245,6 +249,33 @@ function unlockAudio(){const a=ac();if(!a)return;
   audioOK=a.state==='running';}
 ['touchstart','touchend','pointerdown','pointerup','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(!audioOK||!AC||AC.state!=='running')unlockAudio();},{capture:true,passive:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){try{silentEl&&silentEl.pause();}catch(e){}audioOK=false;}});
+// ---------- background music ----------
+// A soft, looping chiptune made on the fly with WebAudio (no audio files): bass + arpeggio, and a small bell
+// melody every other phrase. Notes are scheduled a little ahead of time so the beat stays steady.
+let musicOn=store.get('zuori-music',true),MG=null,mNext=0,mStep=0,mTimer=null;
+const BPM=84,EIGHTH=60/BPM/2;
+const CHORDS=[[45,[69,72,76]],[41,[65,69,72]],[48,[64,67,72]],[43,[67,71,74]]];   // Am F C G
+const ARP=[0,1,2,1,0,1,2,1];
+const MEL=[[76,0,74,72,0,69,0,0],[72,0,0,69,72,0,74,0],[76,0,79,0,76,74,0,72],[74,0,0,0,71,0,0,0],
+           [81,0,79,76,0,74,0,0],[72,0,74,0,76,0,0,0],[79,0,76,0,74,72,0,69],[71,0,72,0,74,0,0,0]];
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+function mNote(m,t,dur,type,vol){const a=AC,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(mtof(m),t);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(MG);o.start(t);o.stop(t+dur+.05);}
+function musicTick(){if(!AC||AC.state!=='running'||!MG)return;
+  if(mNext<AC.currentTime)mNext=AC.currentTime+.05;
+  while(mNext<AC.currentTime+.35){const s=mStep%64,bar=Math.floor(s/8),e=s%8,[bass,ch]=CHORDS[bar%4];
+    if(e===0||e===4)mNote(bass,mNext,EIGHTH*3.6,'triangle',.07);
+    mNote(ch[ARP[e]]+(e>=4&&bar%2?12:0),mNext,EIGHTH*1.6,'square',.012);
+    const phrase=Math.floor(mStep/64)%2,m=MEL[bar][e];if(m&&(phrase===1||bar>=4))mNote(m,mNext,EIGHTH*3,'triangle',.05);
+    mNext+=EIGHTH;mStep++;}}
+function musicSync(){const want=musicOn&&!document.hidden&&AC&&AC.state==='running';
+  if(want&&!MG){MG=AC.createGain();MG.gain.value=0;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;MG.connect(lp).connect(AC.destination);}
+  if(MG){const t=AC.currentTime;MG.gain.cancelScheduledValues(t);MG.gain.setValueAtTime(MG.gain.value,t);MG.gain.linearRampToValueAtTime(want?.8:0,t+(want?1.2:.25));}
+  if(want&&!mTimer){mNext=0;mTimer=setInterval(musicTick,90);musicTick();}
+  if(!want&&mTimer){clearInterval(mTimer);mTimer=null;}}
+['pointerup','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>setTimeout(musicSync,30),{passive:true}));
+document.addEventListener('visibilitychange',musicSync);
+function toggleMusic(){musicOn=!musicOn;store.set('zuori-music',musicOn);$('musicBtn').textContent='音乐：'+(musicOn?'开':'关');musicSync();}
 function tone(f,dur,type='square',vol=.06,f2=null,delay=0){if(muted)return;const a=ac();if(!a)return;const t=a.currentTime+delay;
   const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
   g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.02);}
@@ -431,8 +462,9 @@ function drawHelpIcons(){document.querySelectorAll('canvas[data-icon]').forEach(
   else if(k==='exit'){paintGem(P,2,3);P('#ffffff',3,2,1,3);P('#ffffff',2,3,3,1);}});}$('selClose').onclick=()=>{hideOv();};
 $('againBtn').onclick=()=>loadLevel(li);$('winSel').onclick=showSel;
 $('nextBtn').onclick=()=>{if(li+1<LEVELS.length)loadLevel(li+1);else showSel();};
-function toggleMute(){muted=!muted;store.set('zuori-muted',muted);$('muteBtn').textContent='声音：'+(muted?'关':'开');}
-$('muteBtn').onclick=toggleMute;$('muteBtn').textContent='声音：'+(muted?'关':'开');
+function toggleMute(){muted=!muted;store.set('zuori-muted',muted);$('muteBtn').textContent='音效：'+(muted?'关':'开');}
+$('muteBtn').onclick=toggleMute;$('muteBtn').textContent='音效：'+(muted?'关':'开');
+$('musicBtn').onclick=toggleMusic;$('musicBtn').textContent='音乐：'+(musicOn?'开':'关');
 
 // ---------- win celebration ----------
 function parOf(lv){return lv.sol.reduce((n,x)=>n+x.length,0);}
