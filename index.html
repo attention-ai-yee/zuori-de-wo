@@ -354,6 +354,7 @@ function tone(f,dur,type='square',vol=.06,f2=null,delay=0){if(muted)return;const
   g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.02);}
 const SFX={
   step(){tone(180+Math.random()*40,.04,'square',.025);},
+  hop(){tone(260,.09,'triangle',.05,520);},
   bump(){tone(110,.07,'triangle',.06,70);try{navigator.vibrate&&navigator.vibrate(12);}catch(e){}},
   press(){tone(660,.06,'square',.04);tone(990,.08,'square',.03,null,.05);},
   release(){tone(520,.06,'square',.03,330);},
@@ -393,6 +394,7 @@ function shade(hex,amt){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255
   const f=v=>Math.round(amt<0?v*(1+amt):v+(255-v)*amt);return '#'+[f(r),f(g),f(b)].map(v=>v.toString(16).padStart(2,'0')).join('');}
 
 // ---------- game state ----------
+const HOP_MS=260;let hopT=[];
 let li=0,L=null,g=null,ghosts=[],cur=[],frames=[],anim=null,queue=[],rewinding=null,won=false,winShown=false;
 let doorOpen=[],particles=[],shake=0,facing=[],autoplay=null,fast=false;
 const cv=$('cv'),ctx=cv.getContext('2d');const buf=document.createElement('canvas'),b=buf.getContext('2d');
@@ -423,9 +425,10 @@ function loadLevel(i,keep){li=i;L=LEVELS[i];rot=wantRot();g=parseLevel(levelView
   store.set('zuori-last',i);
 }
 function recompute(snap){frames=simulate(g,ghosts,cur);const last=frames[frames.length-1];
-  if(snap)anim=null;else if(frames.length>1)anim={from:frames[frames.length-2],to:last,t0:performance.now(),acts:actsAt(frames.length-2)};
+  if(snap){anim=null;hopT=[];}else if(frames.length>1){const acts=actsAt(frames.length-2),t=performance.now();anim={from:frames[frames.length-2],to:last,t0:t,acts};
+    acts.forEach((a,i)=>{if(a==='W'){hopT[i]=t;const q=last.a[i];if(q)dust(q.x,q.y);}});}
   won=last.won;updateHud();}
-function actsAt(t){const a=ghosts.map(r=>r[t]||'W');a.push(cur[t]||'W');return a;}
+function actsAt(t){const a=ghosts.map(r=>r[t]||'-');a.push(cur[t]||'W');return a;}
 function curFrame(){return frames[frames.length-1];}
 
 function updateHud(){
@@ -445,7 +448,7 @@ function doAct(a){ac();
   sfxDiff(before,after);
   if(after.won)onWin();}
 function sfxDiff(f0,f1){const pe=f1.ev[f1.ev.length-1];
-  if(pe==='bump')SFX.bump();else if(pe==='move'||pe==='push')SFX.step();
+  if(pe==='bump')SFX.bump();else if(pe==='move'||pe==='push')SFX.step();else if(pe==='wait')SFX.hop();
   const pk=Object.keys(PLATE_COL);let pr=0,rl=0;pk.forEach(k=>{if(f1.pressed[k]&&!f0.pressed[k])pr++;if(!f1.pressed[k]&&f0.pressed[k])rl++;});
   if(pr)SFX.press();else if(rl)SFX.release();
   let op=0,cl=0;f1.doors.forEach((d,i)=>{if(d&&!f0.doors[i])op++;if(!d&&f0.doors[i])cl++;});if(op)SFX.open();else if(cl)SFX.close();}
@@ -641,6 +644,7 @@ function drawBox(x,y){const X=Math.round(x*TS),Y=Math.round(y*TS);
   px('#7b4e2a',X+2,Y+7,12,1);px('#7b4e2a',X+7,Y+2,1,11);px('#5c3a1f',X+2,Y+13,12,1);}
 function drawGuy(spr,x,y,bob,alpha){b.globalAlpha=alpha;b.drawImage(spr,Math.round(x*TS),Math.round(y*TS-bob));b.globalAlpha=1;}
 function drawDigit(n,X,Y,col){const d=DIGITS[n];if(!d)return;px('#13111d',X-1,Y-1,5,7);d.forEach((r,yy)=>{for(let i=0;i<3;i++)if(r[i]==='1')px(col,X+i,Y+yy);});}
+function dust(x,y){for(let k=0;k<5;k++){const d=k<2?-1:k<4?1:0;particles.push({x:x*TS+8+d*3,y:y*TS+14,vx:d*(.25+Math.random()*.3),vy:-.15-Math.random()*.2,life:14+Math.random()*6,col:'#8b84b3'});}}
 function burst(x,y,col,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.4+Math.random()*1.6;
   particles.push({x:x*TS+8,y:y*TS+8,vx:Math.cos(a)*s,vy:Math.sin(a)*s-.5,life:40+Math.random()*30,col});}}
 
@@ -673,6 +677,7 @@ function render(now){
     if(a&&a!=='W'){if(a==='L')facing[i]=1;if(a==='R')facing[i]=0;}
     if(from&&ev==='bump'&&P<1){const k=Math.sin(P*Math.PI)*0.18;x+=DIRS[a][0]*k;y+=DIRS[a][1]*k;}
     if(from&&(ev==='move'||ev==='push')&&P<1)bob=Math.sin(P*Math.PI)*2;
+    if(hopT[i]!=null){const h=(now-hopT[i])/HOP_MS;if(h<1)bob=Math.sin(h*Math.PI)*6;else hopT[i]=null;}
     if(won&&celeT0&&!rewinding){bob+=Math.abs(Math.sin((now-celeT0)/130+i*.8))*5;}
     const isP=i===n-1;const fl=facing[i]||0;
     if(isP){b.globalAlpha=.35;px('#000',Math.round(x*TS)+3,Math.round(y*TS)+14,10,2);b.globalAlpha=1;drawGuy(heroSpr[fl],x,y,bob,1);}
