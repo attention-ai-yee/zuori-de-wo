@@ -198,6 +198,9 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
         <div class="hl"><canvas data-icon="door"></canvas><p><b>门</b>：关着时走不过去，同色压力板被踩住时打开。</p></div>
         <div class="hl"><canvas data-icon="inv"></canvas><p><b>反向门</b>（斜纹）：反过来，同色压力板被踩住时关上。</p></div>
         <div class="hl"><canvas data-icon="box"></canvas><p><b>箱子</b>：走过去就能推。推到压力板上，可以代替人踩住。</p></div>
+        <div class="hl"><canvas data-icon="key"></canvas><p><b>钥匙</b>：只能被拿走一次，谁先走到谁拿（影子也会拿）。带着钥匙走进<b>锁门</b>，门就永远开了。</p></div>
+        <div class="hl"><canvas data-icon="lock"></canvas><p><b>锁门</b>：要用一把钥匙打开，开了以后谁都能过。</p></div>
+        <div class="hl"><canvas data-icon="portal"></canvas><p><b>传送门</b>：同色的两个是一对，踩上一个就从另一个出来，影子也一样。另一头站着人时传不过去。</p></div>
         <div class="hl"><canvas data-icon="exit"></canvas><p><b>钻石</b>：你自己拿到钻石就过关，影子碰到不算。</p></div>
       </div>
       <p class="hnote">「留影」按钮上的数字是这一关还能留几个影子。底部按钮：等待一步 · 留影 · 撤销一步。卡住了就点左上角的灯泡看提示；想从头来就点灯泡旁边的「重开」（走过几步时要连点两下）。</p>
@@ -224,7 +227,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 const DIRS={U:[0,-1],D:[0,1],L:[-1,0],R:[1,0],W:[0,0]};
 function parseLevel(L){
   const rows=L.map, H=rows.length, W=Math.max(...rows.map(r=>r.length));
-  const g={W,H,tiles:[],plates:{},doors:[],doorAt:{},start:null,exit:null,boxes:[]};
+  const g={W,H,tiles:[],plates:{},doors:[],doorAt:{},start:null,exit:null,boxes:[],keys:[],keyAt:{},locks:[],lockAt:{},portals:{}};
   for(let y=0;y<H;y++){g.tiles.push([]);for(let x=0;x<W;x++){
     let c=rows[y][x]||'#';
     if(c==='S'){g.start={x,y};c='.';}
@@ -233,14 +236,22 @@ function parseLevel(L){
     else if('abcd'.includes(c)){g.plates[x+','+y]=c;}
     else if('ABCD'.includes(c)){g.doors.push({x,y,col:c.toLowerCase(),inv:false});}
     else if('1234'.includes(c)){g.doors.push({x,y,col:'abcd'['1234'.indexOf(c)],inv:true});}
+    else if(c==='k'){g.keyAt[x+','+y]=g.keys.length;g.keys.push({x,y});c='.';}
+    else if(c==='L'){g.lockAt[x+','+y]=g.locks.length;g.locks.push({x,y});}
+    else if('pPqQ'.includes(c)){(g.portals[c.toLowerCase()]=g.portals[c.toLowerCase()]||[]).push({x,y,end:c});}
     g.tiles[y].push(c);
   }}
   g.doors.forEach((d,i)=>g.doorAt[d.x+','+d.y]=i);
+  // portal pairs: stepping onto one end puts you on the other (if nobody is standing there)
+  g.warp={};for(const k in g.portals){const [a,b]=g.portals[k];if(a&&b){g.warp[a.x+','+a.y]={x:b.x,y:b.y,pair:k};g.warp[b.x+','+b.y]={x:a.x,y:a.y,pair:k};}}
   return g;
 }
 // agents: [ghost0..ghostN-1, player]; ghosts act first, in order.
-function initState(g,n){return {t:0,a:Array.from({length:n+1},()=>({x:g.start.x,y:g.start.y})),boxes:g.boxes.map(b=>({...b})),won:false};}
-function cloneState(s){return {t:s.t,a:s.a.map(q=>({x:q.x,y:q.y})),boxes:s.boxes.map(b=>({x:b.x,y:b.y})),won:s.won};}
+// keys: each key can be picked up once, by whoever reaches it first (ghost or you). A locked door (L) opens for good
+// when someone carrying a key walks into it, using up that key.
+function initState(g,n){return {t:0,a:Array.from({length:n+1},()=>({x:g.start.x,y:g.start.y})),boxes:g.boxes.map(b=>({...b})),won:false,
+  keys:g.keys.map(()=>true),locks:g.locks.map(()=>true),held:Array(n+1).fill(0)};}
+function cloneState(s){return {t:s.t,a:s.a.map(q=>({x:q.x,y:q.y})),boxes:s.boxes.map(b=>({x:b.x,y:b.y})),won:s.won,keys:s.keys.slice(),locks:s.locks.slice(),held:s.held.slice()};}
 function pressedOf(g,st,skip){const s={};const chk=o=>{if(o===skip)return;const c=g.plates[o.x+','+o.y];if(c)s[c]=true;};st.a.forEach(chk);st.boxes.forEach(chk);return s;}
 // a door is passable only while its plate says open; someone caught inside just keeps it from shutting on them (jam), it does not let others in.
 function doorStates(g,st,skip){const pr=pressedOf(g,st,skip);return g.doors.map(d=>{const on=!!pr[d.col];return d.inv?!on:on;});}
@@ -248,18 +259,24 @@ function doorJams(g,st){return g.doors.map(d=>st.a.some(q=>q.x===d.x&&q.y===d.y)
 function step(g,st,acts){ // mutates st, returns events per agent
   const occ=(x,y)=>st.a.some(q=>q.x===x&&q.y===y);
   const boxAt=(x,y)=>st.boxes.find(b=>b.x===x&&b.y===y);
-  const solid=(x,y,skip)=>{if(x<0||y<0||x>=g.W||y>=g.H)return true;if(g.tiles[y][x]==='#')return true;
+  const locked=(x,y)=>{const li=g.lockAt[x+','+y];return li!==undefined&&st.locks[li];};
+  const solid=(x,y,skip)=>{if(x<0||y<0||x>=g.W||y>=g.H)return true;if(g.tiles[y][x]==='#')return true;if(locked(x,y))return true;
     const di=g.doorAt[x+','+y];if(di!==undefined&&!doorStates(g,st,skip)[di])return true;return false;};
   const ev=st.a.map((e,i)=>{const a=acts[i];if(!a||a==='W')return 'wait';const [dx,dy]=DIRS[a];const nx=e.x+dx,ny=e.y+dy;
+    let unl=false;
+    if(locked(nx,ny)&&st.held[i]>0){st.locks[g.lockAt[nx+','+ny]]=false;st.held[i]--;unl=true;}
     if(solid(nx,ny,e))return 'bump'; // the mover lifts off its own plate as it steps
-    const b=boxAt(nx,ny);
-    if(b){const bx=nx+dx,by=ny+dy;if(solid(bx,by,b)||boxAt(bx,by)||occ(bx,by)||(g.exit&&bx===g.exit.x&&by===g.exit.y))return 'bump';b.x=bx;b.y=by;e.x=nx;e.y=ny;return 'push';}
-    e.x=nx;e.y=ny;return 'move';});
+    const b=boxAt(nx,ny);let r='move';
+    if(b){const bx=nx+dx,by=ny+dy;if(solid(bx,by,b)||boxAt(bx,by)||occ(bx,by)||g.warp[bx+','+by]||(g.exit&&bx===g.exit.x&&by===g.exit.y))return 'bump';b.x=bx;b.y=by;r='push';}
+    e.x=nx;e.y=ny;if(unl)r='unlock';
+    const ki=g.keyAt[nx+','+ny];if(ki!==undefined&&st.keys[ki]){st.keys[ki]=false;st.held[i]++;r='key';}
+    const w=g.warp[nx+','+ny];if(w&&!occ(w.x,w.y)&&!boxAt(w.x,w.y)){e.x=w.x;e.y=w.y;r='warp';}
+    return r;});
   st.t++;const p=st.a[st.a.length-1];
   if(g.exit&&p.x===g.exit.x&&p.y===g.exit.y)st.won=true;
   return ev;
 }
-function snapOf(g,st,ev){return {t:st.t,a:st.a.map(q=>({...q})),boxes:st.boxes.map(b=>({...b})),doors:doorStates(g,st),jams:doorJams(g,st),pressed:pressedOf(g,st),ev,won:st.won};}
+function snapOf(g,st,ev){return {t:st.t,a:st.a.map(q=>({...q})),boxes:st.boxes.map(b=>({...b})),doors:doorStates(g,st),jams:doorJams(g,st),pressed:pressedOf(g,st),ev,won:st.won,keys:st.keys.slice(),locks:st.locks.slice(),held:st.held.slice()};}
 function simulate(g,recs,cur){
   const st=initState(g,recs.length);const frames=[snapOf(g,st,[])];
   for(let t=0;t<cur.length&&!st.won;t++){const acts=recs.map(r=>r[t]||'W');acts.push(cur[t]);frames.push(snapOf(g,st,step(g,st,acts)));}
@@ -296,7 +313,7 @@ map:["##############","#S..C..o....a#","#...#.b......#","#.c.##########","#...A.
 sol:["WRRRRRRRRRRDLLLLL","DDRWDRWWWWRRRRWWRRRR"]},
 {name:"开门的人",cap:2,hint:"先录去最远那块板的影子。斜纹门要赶在那块板被踩住之前穿过去。",
 map:["##############","#S....C.....a#","#.c...########","#.....#......#","#.....#..b...#","###1###......#","#.....A......#","#.....#####B##","##########.E.#","##############"],
-sol:["RRRRRRRRRRR","WWDRDDRDDRRRRUURRU","WDDDRRDDRRRRRRRRDD"]},
+sol:["RRRRRRRRRRR","WWDRDDRDDRRRRUURR","WDDDRRDDRRRRRRRRDD"]},
 {name:"绕路",cap:3,hint:"反向门后面那块板，要趁同色板没人踩的时候进去。",
 map:["################","#S..#.....#....#","#...A..b..B..c.#","#.a.#.....#....#","########2##C####","#######.d##.D.E#","################"],
 sol:["DDR","DRRRRRRWWWDRDD","DRRRRRRRRRRRR","DRRRRRRRRRRDDDRRR"]},
@@ -309,6 +326,24 @@ sol:["WRRRRRRRWWRRRRRR","DDRUDDRRRRRRRRRRRR"]},
 {name:"互为钥匙",cap:2,hint:"两个影子都要别人开门才进得去。从你自己能做的那一步开始。",
 map:["#################","#S..C..d.....b..#","#...#...........#","#.c.#############","#...D.....a.....#","#...#...........#","#...#############","#...A.....B...E.#","#################"],
 sol:["WRRRRRRWWWWWWRRRRRR","WDDDRRRRRRRRR","DDRUUDDDDDDRRRRRRRRRRRR"]},
+{name:"钥匙",cap:1,hint:"钥匙只能拿一次。拿着它走进锁门，门就一直开着了。",
+map:["###########","#S..a.....#","#.#########","#....A..k.#","###L#######","#.........#","#.......E.#","###########"],
+sol:["WWWRRR","DDRRRRRRRLLLLLDDDRRRRR"]},
+{name:"抢先一步",cap:1,hint:"影子会比你先走到钥匙那儿。让过去的你晚点出发。",
+map:["##########","#S.k...a.#","#.########","#.....A.LE","##########"],
+sol:["WWWWWRRRRRR","RRLLDDRRRRRRRR"]},
+{name:"钥匙在门里",cap:1,hint:"钥匙在一扇要有人踩着才开的门里。想清楚谁去拿钥匙、谁去踩板，踩完一块还能去踩另一块。",
+map:["##############","#S..b.#......#","#.....B...k..#","#.....########","###L##########","#a........A.E#","##############"],
+sol:["WWWRRRWWWWWWWWWWWWWWDDLDDLL","DRRRRRRRRRLLLLLDLLDDRRRRRRRRR"]},
+{name:"传送门",cap:1,hint:"踩上传送门，就会从同色的另一个门出来。影子也一样。",
+map:["###########","#S..p#..a.#","#...##.P..#","##A########","#........E#","###########"],
+sol:["RRRUR","WWDRDDRRRRRRR"]},
+{name:"两头跑",cap:1,hint:"守完这块板，从传送门过去守另一块。数好步数。",
+map:["###############","#S.....A...B.E#","#.#############","#..a.p#P.b#####","###############"],
+sol:["WWDDRRRRRR","RRRRRRRRRRRR"]},
+{name:"替身",cap:2,hint:"传送门那头是个出不去的小格子。可要是那头已经站着人，你踩上来就不会被传走。",
+map:["##############","#S...p....A.E#","#####.########","#P###a########","##############"],
+sol:["WWWRRRRDD","RRRR","RRRRRRRRRRR"]},
 {name:"告别",cap:3,hint:"最后一关。学过的都用上。",
 map:["######################","#S..C..o....a#########","#...#.b......#########","#.c.##################","#...A...B..2...C..D.E#","#################d####","######################"],
 sol:["DDR","RRRRRRRRRRDLLLLLWWWWU","DDDRRWWWWWWWWWWRRRRRRRRRRRRRRD","DDDRRWWWWWWWWWWRRRRRRRRRRRRRRRRR"]}
@@ -410,6 +445,9 @@ function tone(f,dur,type='square',vol=.06,f2=null,delay=0){if(muted)return;const
 const SFX={
   step(){tone(180+Math.random()*40,.04,'square',.025);},
   hop(){tone(260,.09,'triangle',.05,520);},
+  key(){tone(880,.06,'square',.04);tone(1320,.08,'square',.035,null,.06);tone(1760,.1,'square',.03,null,.12);},
+  unlock(){tone(140,.1,'square',.06,90);tone(420,.12,'triangle',.05,null,.08);},
+  warp(){tone(300,.18,'sine',.06,1400);tone(1400,.14,'sine',.03,500,.1);},
   bump(){tone(110,.07,'triangle',.06,70);try{navigator.vibrate&&navigator.vibrate(12);}catch(e){}},
   press(){tone(660,.06,'square',.04);tone(990,.08,'square',.03,null,.05);},
   release(){tone(520,.06,'square',.03,330);},
@@ -504,6 +542,8 @@ function doAct(a){ac();
   if(after.won)onWin();}
 function sfxDiff(f0,f1){const pe=f1.ev[f1.ev.length-1];
   if(pe==='bump')SFX.bump();else if(pe==='move'||pe==='push')SFX.step();else if(pe==='wait')SFX.hop();
+  if(f1.ev.includes('key'))SFX.key();if(f1.ev.includes('unlock'))SFX.unlock();if(f1.ev.includes('warp'))SFX.warp();
+  f1.ev.forEach((e,i)=>{if(e==='warp'&&!fast){const q0=f0.a[i],q=f1.a[i];burst(q.x,q.y,'#ff9be6',10);}if(e==='key'&&!fast){const q=f1.a[i];burst(q.x,q.y,'#ffd84a',12);}});
   const pk=Object.keys(PLATE_COL);let pr=0,rl=0;pk.forEach(k=>{if(f1.pressed[k]&&!f0.pressed[k])pr++;if(!f1.pressed[k]&&f0.pressed[k])rl++;});
   if(pr)SFX.press();else if(rl)SFX.release();
   let op=0,cl=0;f1.doors.forEach((d,i)=>{if(d&&!f0.doors[i])op++;if(!d&&f0.doors[i])cl++;});if(op)SFX.open();else if(cl)SFX.close();}
@@ -587,6 +627,9 @@ function drawHelpIcons(){document.querySelectorAll('canvas[data-icon]').forEach(
   else if(k==='door'||k==='inv'){const col=k==='door'?PLATE_COL.a:PLATE_COL.b;P(shade(col,-.45),1,0,14,16);for(let i=0;i<4;i++)P(col,2+i*4,0,2,16);
     if(k==='inv'){for(let yy=0;yy<16;yy++)P(shade(col,-.7),1+((yy*2)%14),yy,2,1);for(let i=0;i<16;i+=4){P(col,i,0,2,1);P(col,i,15,2,1);}}}
   else if(k==='box'){P('#3b2414',1,1,14,14);P('#a16a3c',2,2,12,11);P('#c88b52',2,2,12,1);P('#7b4e2a',2,7,12,1);P('#7b4e2a',7,2,1,11);}
+  else if(k==='key'){const X0=3,Y0=5,o='#5a3d0a',kk='#ffd84a';P(o,X0,Y0,4,6);P(kk,X0+1,Y0+1,2,4);P('#24213a',X0+1,Y0+2,2,2);P(o,X0+4,Y0+2,6,2);P(kk,X0+4,Y0+2,6,1);P(o,X0+7,Y0+4,1,2);P(o,X0+9,Y0+4,1,2);}
+  else if(k==='lock'){P('#3b2414',0,0,16,16);P('#8a5a2e',1,1,14,14);for(let i=0;i<3;i++)P('#6e4522',1,4+i*4,14,1);P('#c9a227',5,5,6,7);P('#ffd84a',5,5,6,1);P('#3b2414',7,7,2,2);P('#3b2414',7,9,1,2);}
+  else if(k==='portal'){P('#120f22',2,3,12,10);P('#120f22',3,2,10,12);for(let i=0;i<10;i++){const a=i*Math.PI/5;P(i%2?'#ff5fd2':'#ffd1f3',Math.round(8+Math.cos(a)*5)-1,Math.round(8+Math.sin(a)*4.3)-1,2,2);}P('#ff5fd2',7,7,2,2);}
   else if(k==='exit'){paintGem(P,2,3);P('#ffffff',3,2,1,3);P('#ffffff',2,3,3,1);}});}$('selClose').onclick=()=>{hideOv();};
 $('againBtn').onclick=()=>loadLevel(li);$('winSel').onclick=showSel;
 $('nextBtn').onclick=()=>{if(li+1<LEVELS.length)loadLevel(li+1);else showSel();};
@@ -712,6 +755,20 @@ function drawExit(x,y,t){drawFloor(x,y);const X=x*TS+2,Y=y*TS+2;
 function drawBox(x,y){const X=Math.round(x*TS),Y=Math.round(y*TS);
   px('#3b2414',X+1,Y+1,14,14);px('#a16a3c',X+2,Y+2,12,11);px('#c88b52',X+2,Y+2,12,1);
   px('#7b4e2a',X+2,Y+7,12,1);px('#7b4e2a',X+7,Y+2,1,11);px('#5c3a1f',X+2,Y+13,12,1);}
+// key: 10x6 pixel key, X/Y in buffer pixels
+function drawKey(X,Y,alpha){b.globalAlpha=alpha;const o='#5a3d0a',k='#ffd84a',h='#fff3b0';
+  px(o,X,Y,4,6);px(k,X+1,Y+1,2,4);px(h,X+1,Y+1,1,1);px('#26233d',X+1,Y+2,2,2);   // ring with hole
+  px(o,X+4,Y+2,6,2);px(k,X+4,Y+2,6,1);px(o,X+7,Y+4,1,2);px(o,X+9,Y+4,1,2);px(k,X+7,Y+4,1,1);px(k,X+9,Y+4,1,1);b.globalAlpha=1;}
+// locked door: heavy wooden door with a gold keyhole plate
+function drawLock(x,y){const X=x*TS,Y=y*TS;px('#3b2414',X,Y,TS,TS);px('#8a5a2e',X+1,Y+1,14,14);
+  for(let i=0;i<3;i++)px('#6e4522',X+1,Y+4+i*4,14,1);px('#a87444',X+1,Y+1,14,1);
+  px('#c9a227',X+5,Y+5,6,7);px('#ffd84a',X+5,Y+5,6,1);px('#3b2414',X+7,Y+7,2,2);px('#3b2414',X+7.5|0,Y+9,1,2);}
+// portal: a swirling ring; each pair has its own colour, the uppercase end is drawn slightly darker
+const PORTAL_COL={p:['#ff5fd2','#ffd1f3'],q:['#3fe0a0','#c8ffe9']};
+function drawPortal(x,y,pair,t){const X=x*TS+8,Y=y*TS+8;const [c1,c2]=PORTAL_COL[pair]||PORTAL_COL.p;
+  b.globalAlpha=.9;px('#120f22',X-6,Y-5,12,10);px('#120f22',X-5,Y-6,10,12);
+  for(let i=0;i<10;i++){const a=t/260+i*Math.PI/5,r=5+Math.sin(t/200+i)*.6;px(i%2?c1:c2,Math.round(X+Math.cos(a)*r)-1,Math.round(Y+Math.sin(a)*r*.85)-1,2,2);}
+  b.globalAlpha=.5+.3*Math.sin(t/180);px(c1,X-1,Y-1,2,2);b.globalAlpha=1;}
 function drawGuy(spr,x,y,bob,alpha){b.globalAlpha=alpha;b.drawImage(spr,Math.round(x*TS),Math.round(y*TS-bob));b.globalAlpha=1;}
 function drawDigit(n,X,Y,col){const d=DIGITS[n];if(!d)return;px('#13111d',X-1,Y-1,5,7);d.forEach((r,yy)=>{for(let i=0;i<3;i++)if(r[i]==='1')px(col,X+i,Y+yy);});}
 function dust(x,y){for(let k=0;k<5;k++){const d=k<2?-1:k<4?1:0;particles.push({x:x*TS+8+d*3,y:y*TS+14,vx:d*(.25+Math.random()*.3),vy:-.15-Math.random()*.2,life:14+Math.random()*6,col:'#8b84b3'});}}
@@ -734,6 +791,9 @@ function render(now){
   for(const k in g.plates){const [x,y]=k.split(',').map(Number);drawPlate(x,y,g.plates[k],!!F.pressed[g.plates[k]]&&occupied(F,x,y),now);}
   g.doors.forEach((d,i)=>drawDoor(i,d,doorOpen[i],F.jams[i],now));
   if(g.exit)drawExit(g.exit.x,g.exit.y,now);
+  for(const k in g.warp){const [x,y]=k.split(',').map(Number);drawPortal(x,y,g.warp[k].pair,now);}
+  g.locks.forEach((l,i)=>{if(F.locks&&F.locks[i])drawLock(l.x,l.y);});
+  g.keys.forEach((k,i)=>{if(F.keys&&F.keys[i])drawKey(k.x*TS+3,k.y*TS+4+Math.round(Math.sin(now/300+i)),1);});
   // ghost path preview: where each ghost goes in the next steps if you stand still
   if(!rewinding&&!won&&ghosts.length){const fut=simulate(g,ghosts,cur.concat(['W','W','W','W','W']));
     for(let i=0;i<ghosts.length;i++){let prev=F.a[i];for(let s=1;s<=5;s++){const fr=fut[frames.length-1+s];if(!fr)break;const q=fr.a[i];
@@ -745,6 +805,7 @@ function render(now){
   for(let i=0;i<n;i++){const q=F.a[i];const q0=from?from.a[i]:q;let x=lerp(q0.x,q.x),y=lerp(q0.y,q.y),bob=0;
     const a=acts?acts[i]:'W';const ev=F.ev&&F.ev[i];
     if(a&&a!=='W'){if(a==='L')facing[i]=1;if(a==='R')facing[i]=0;}
+    if(ev==='warp'){x=q.x;y=q.y;}
     if(from&&ev==='bump'&&P<1){const k=Math.sin(P*Math.PI)*0.18;x+=DIRS[a][0]*k;y+=DIRS[a][1]*k;}
     if(from&&(ev==='move'||ev==='push')&&P<1)bob=Math.sin(P*Math.PI)*2;
     if(hopT[i]!=null){const h=(now-hopT[i])/HOP_MS;if(h<1)bob=Math.sin(h*Math.PI)*6;else hopT[i]=null;}
@@ -753,7 +814,8 @@ function render(now){
     if(isP){b.globalAlpha=.35;px('#000',Math.round(x*TS)+3,Math.round(y*TS)+14,10,2);b.globalAlpha=1;drawGuy(heroSpr[fl],x,y,bob,1);}
     else{const gc=i%GHOST_COL.length;const flick=.55+.12*Math.sin(now/140+i*2);drawGuy(ghostSpr[gc][fl],x,y,bob,rewinding?.35:flick);
       drawDigit(i+1,Math.round(x*TS)+12,Math.round(y*TS-bob)+1,GHOST_COL[gc]);
-      if(cur.length>=ghosts[i].length&&!rewinding){b.globalAlpha=.6;px(GHOST_COL[gc],Math.round(x*TS)+2,Math.round(y*TS)+15,12,1);b.globalAlpha=1;}}}
+      if(cur.length>=ghosts[i].length&&!rewinding){b.globalAlpha=.6;px(GHOST_COL[gc],Math.round(x*TS)+2,Math.round(y*TS)+15,12,1);b.globalAlpha=1;}}
+    if(F.held&&F.held[i]>0)drawKey(Math.round(x*TS)+1,Math.round(y*TS-bob)-6,isP?1:.8);}   // carrying a key: a little key over the head
   // particles
   particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.03;p.life--;b.globalAlpha=Math.max(0,Math.min(1,p.life/30));px(p.col,Math.round(p.x),Math.round(p.y));return p.life>0;});b.globalAlpha=1;
   drawFx(now);
