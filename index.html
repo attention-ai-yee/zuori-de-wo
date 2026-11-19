@@ -36,7 +36,7 @@ button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-
 }
 /* top strip: round buttons plus a tiny level chip on the left; the right side stays empty for the WeChat capsule */
 #top{display:flex;align-items:center;height:44px;flex:none}
-#topL{display:flex;gap:6px;align-items:center}
+#topL{display:flex;gap:5px;align-items:center}
 .ico.sm{width:36px;height:36px}
 .ico.sm svg{width:18px;height:18px}
 .ico{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:none;cursor:pointer;display:grid;place-items:center}
@@ -44,6 +44,7 @@ button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-
 #lvchip{margin-left:auto;padding-right:4px;font-size:12px;color:var(--dim);letter-spacing:.06em;white-space:nowrap;display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.25}
 /* inside WeChat the capsule sits at the top-right, so the level info moves left of it */
 .wx #lvchip{padding-right:100px}
+#restartBtn.arm{background:rgba(242,163,58,.25);color:var(--amber)}
 #lvchip b{color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:0}
 #lvchip .goal{font-size:11px;letter-spacing:0}
 #lvchip .goal.s3{color:var(--amber)}
@@ -154,7 +155,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
 <div id="app">
   <div id="top">
     <div id="topL"><button class="ico" id="menuBtn" type="button" aria-label="菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <button class="ico" id="helpBtn" type="button" aria-label="帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2v.6"/><path d="M12 18.2v.1"/></svg></button><button class="ico" id="hintBtn" data-c="solve" type="button" aria-label="提示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button></div>
+    <button class="ico" id="helpBtn" type="button" aria-label="帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2v.6"/><path d="M12 18.2v.1"/></svg></button><button class="ico" id="hintBtn" data-c="solve" type="button" aria-label="提示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button><button class="ico" id="restartBtn" type="button" aria-label="重开本关"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     <div id="lvchip"></div>
   </div>
   <div id="stage"><canvas id="cv"></canvas><div id="intro"></div><div id="toast"></div><div id="tip" hidden><span id="tipText"></span><button id="tipSolve" type="button">演示解法</button></div><div id="coach" hidden><i></i>在棋盘上滑动来移动，点自己原地等一步</div></div>
@@ -184,7 +185,6 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
       <h2>菜单</h2>
       <div id="grid"></div>
       <div class="row"><button class="btn sm" id="musicBtn" type="button">音乐：开</button><button class="btn sm" id="muteBtn" type="button">音效：开</button></div>
-      <div class="row"><button class="btn sm" id="resetBtn" data-c="reset" type="button">重开本关</button></div>
       <div class="row"><button class="btn" id="selClose" type="button">继续游戏</button></div>
     </div>
   </div>
@@ -200,7 +200,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
         <div class="hl"><canvas data-icon="box"></canvas><p><b>箱子</b>：走过去就能推。推到压力板上，可以代替人踩住。</p></div>
         <div class="hl"><canvas data-icon="exit"></canvas><p><b>钻石</b>：你自己拿到钻石就过关，影子碰到不算。</p></div>
       </div>
-      <p class="hnote">「留影」按钮上的数字是这一关还能留几个影子。底部按钮：等待一步 · 留影 · 撤销一步。卡住了就点左上角的灯泡看提示。</p>
+      <p class="hnote">「留影」按钮上的数字是这一关还能留几个影子。底部按钮：等待一步 · 留影 · 撤销一步。卡住了就点左上角的灯泡看提示；想从头来就点灯泡旁边的「重开」（走过几步时要连点两下）。</p>
       <div class="row"><button class="btn" id="helpClose" type="button">知道了</button></div>
     </div>
   </div>
@@ -592,6 +592,9 @@ $('againBtn').onclick=()=>loadLevel(li);$('winSel').onclick=showSel;
 $('nextBtn').onclick=()=>{if(li+1<LEVELS.length)loadLevel(li+1);else showSel();};
 function toggleMute(){muted=!muted;store.set('zuori-muted',muted);$('muteBtn').textContent='音效：'+(muted?'关':'开');}
 $('muteBtn').onclick=toggleMute;$('muteBtn').textContent='音效：'+(muted?'关':'开');
+let restartArm=-1e9;$('restartBtn').onclick=()=>{const busy=ghosts.length||cur.length;const now=performance.now();
+  if(!busy||now-restartArm<2500){restartArm=-1e9;$('restartBtn').classList.remove('arm');resetAll();return;}
+  restartArm=now;$('restartBtn').classList.add('arm');toast('再点一次，重开本关',2500);setTimeout(()=>{if(performance.now()-restartArm>=2400)$('restartBtn').classList.remove('arm');},2500);};
 $('musicBtn').onclick=toggleMusic;$('musicBtn').textContent='音乐：'+(musicOn?'开':'关');
 
 // ---------- win celebration ----------
