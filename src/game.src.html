@@ -250,27 +250,50 @@ function unlockAudio(){const a=ac();if(!a)return;
 ['touchstart','touchend','pointerdown','pointerup','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(!audioOK||!AC||AC.state!=='running')unlockAudio();},{capture:true,passive:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){try{silentEl&&silentEl.pause();}catch(e){}audioOK=false;}});
 // ---------- background music ----------
-// A soft, looping chiptune made on the fly with WebAudio (no audio files): bass + arpeggio, and a small bell
-// melody every other phrase. Notes are scheduled a little ahead of time so the beat stays steady.
-let musicOn=store.get('zuori-music',true),MG=null,mNext=0,mStep=0,mTimer=null;
-const BPM=84,EIGHTH=60/BPM/2;
-const CHORDS=[[45,[69,72,76]],[41,[65,69,72]],[48,[64,67,72]],[43,[67,71,74]]];   // Am F C G
-const ARP=[0,1,2,1,0,1,2,1];
-const MEL=[[76,0,74,72,0,69,0,0],[72,0,0,69,72,0,74,0],[76,0,79,0,76,74,0,72],[74,0,0,0,71,0,0,0],
-           [81,0,79,76,0,74,0,0],[72,0,74,0,76,0,0,0],[79,0,76,0,74,72,0,69],[71,0,72,0,74,0,0,0]];
+// A bouncy, looping chiptune made on the fly with WebAudio (no audio files). 16 bars in C major, form A A' B A'':
+// lead melody with a soft echo, staccato bass that hops between root and fifth, an arpeggio, and light drums.
+// Notes are scheduled a little ahead of time so the beat stays steady.
+let musicOn=store.get('zuori-music',true),MG=null,ECHO=null,NOISE=null,mNext=0,mStep=0,mTimer=null;
+const BPM=112,EIGHTH=60/BPM/2;
+const CH={C:[48,[60,64,67]],G:[43,[59,62,67]],Am:[45,[60,64,69]],F:[41,[60,65,69]],Em:[40,[59,64,67]]};
+const SONG=['C','G','Am','F','C','G','Am','F','F','G','Em','Am','C','G','F','G'];
+const _=-1;   // hold the previous note
+const MEL=[[72,_,76,_,79,_,76,79],[79,_,74,_,71,_,74,_],[76,_,72,76,81,_,79,_],[77,_,76,_,74,_,0,0],
+           [72,_,76,_,79,_,84,_],[83,_,79,_,74,_,79,_],[81,_,79,76,77,_,76,_],[72,_,_,_,0,0,0,0],
+           [69,72,77,72,69,72,77,79],[79,_,77,_,76,_,74,_],[76,79,83,79,76,79,83,84],[81,_,_,_,79,_,76,74],
+           [72,_,76,_,79,_,76,79],[79,_,74,_,71,_,74,_],[77,_,81,_,79,_,77,74],[74,_,_,_,71,_,74,_]];
+const BASS=[0,null,7,null,12,null,7,null];
+const ARP=[0,1,2,1,2,1,0,1];
 const mtof=m=>440*Math.pow(2,(m-69)/12);
-function mNote(m,t,dur,type,vol){const a=AC,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(mtof(m),t);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(MG);o.start(t);o.stop(t+dur+.05);}
+function mNote(m,t,dur,type,vol,dest){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(mtof(m),t);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);g.gain.setValueAtTime(vol,t+dur*.6);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(dest||MG);o.start(t);o.stop(t+dur+.05);}
+function mKick(t){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);
+  g.gain.setValueAtTime(.16,t);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.connect(g).connect(MG);o.start(t);o.stop(t+.2);}
+function mNoise(t,dur,vol,type,freq){const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NOISE;f.type=type;f.frequency.value=freq;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(f).connect(g).connect(MG);s.start(t,Math.random()*.5);s.stop(t+dur+.02);}
 function musicTick(){if(!AC||AC.state!=='running'||!MG)return;
   if(mNext<AC.currentTime)mNext=AC.currentTime+.05;
-  while(mNext<AC.currentTime+.35){const s=mStep%64,bar=Math.floor(s/8),e=s%8,[bass,ch]=CHORDS[bar%4];
-    if(e===0||e===4)mNote(bass,mNext,EIGHTH*3.6,'triangle',.07);
-    mNote(ch[ARP[e]]+(e>=4&&bar%2?12:0),mNext,EIGHTH*1.6,'square',.012);
-    const phrase=Math.floor(mStep/64)%2,m=MEL[bar][e];if(m&&(phrase===1||bar>=4))mNote(m,mNext,EIGHTH*3,'triangle',.05);
-    mNext+=EIGHTH;mStep++;}}
+  while(mNext<AC.currentTime+.35){const s=mStep%128;scheduleStep(mNext,Math.floor(s/8),s%8);mNext+=EIGHTH;mStep++;}}
+function scheduleStep(t,bar,e){const [root,tri]=CH[SONG[bar]];
+    if(BASS[e]!=null)mNote(root+BASS[e],t,EIGHTH*.9,'triangle',.11);
+    mNote(tri[ARP[e]]+(bar>=8&&bar<12?24:12),t,EIGHTH*.7,'square',.011);
+    const m=MEL[bar][e];if(m>0){let k=1;while(e+k<8&&MEL[bar][e+k]===_)k++;mNote(m,t,EIGHTH*k*.95,'square',.03,ECHO);}
+    if(e===0||e===4)mKick(t);
+    if(e===2||e===6)mNoise(t,.11,.05,'bandpass',1800);
+    if(e%2===1)mNoise(t,.04,.02,'highpass',7000);
+    if(bar===15&&e>=6)mNoise(t,.08,.035,'bandpass',2600);}   // little fill before the loop restarts
+function buildMusic(){MG=AC.createGain();const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3600;MG.connect(lp).connect(AC.destination);
+  // lead goes through a short echo (dry + one delayed, quieter copy feeding back a little)
+  ECHO=AC.createGain();ECHO.connect(MG);const d=AC.createDelay(1),fb=AC.createGain(),wet=AC.createGain();d.delayTime.value=EIGHTH*3;fb.gain.value=.28;wet.gain.value=.35;
+  ECHO.connect(d);d.connect(fb).connect(d);d.connect(wet).connect(MG);
+  NOISE=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const ch=NOISE.getChannelData(0);for(let i=0;i<ch.length;i++)ch[i]=Math.random()*2-1;}
+// test hook: render one full loop into an OfflineAudioContext (used to make a listenable preview file)
+window.__music={steps:128,eighth:EIGHTH,render(ctx){const keep=[AC,MG,ECHO,NOISE];AC=ctx;buildMusic();MG.gain.value=.7;mStep=0;mNext=.05;
+  while(mStep<128){const s=mStep%128,bar=Math.floor(s/8),e=s%8;scheduleStep(mNext,bar,e);mNext+=EIGHTH;mStep++;}[AC,MG,ECHO,NOISE]=keep;mStep=0;mNext=0;return ctx.startRendering();}};
 function musicSync(){const want=musicOn&&!document.hidden&&AC&&AC.state==='running';
-  if(want&&!MG){MG=AC.createGain();MG.gain.value=0;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;MG.connect(lp).connect(AC.destination);}
-  if(MG){const t=AC.currentTime;MG.gain.cancelScheduledValues(t);MG.gain.setValueAtTime(MG.gain.value,t);MG.gain.linearRampToValueAtTime(want?.8:0,t+(want?1.2:.25));}
+  if(want&&!MG){buildMusic();MG.gain.value=0;}
+  if(MG){const t=AC.currentTime;MG.gain.cancelScheduledValues(t);MG.gain.setValueAtTime(MG.gain.value,t);MG.gain.linearRampToValueAtTime(want?.7:0,t+(want?1.2:.25));}
   if(want&&!mTimer){mNext=0;mTimer=setInterval(musicTick,90);musicTick();}
   if(!want&&mTimer){clearInterval(mTimer);mTimer=null;}}
 ['pointerup','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>setTimeout(musicSync,30),{passive:true}));
