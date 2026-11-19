@@ -184,7 +184,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;filte
       <h2>菜单</h2>
       <div id="grid"></div>
       <div class="row"><button class="btn sm" id="musicBtn" type="button">音乐：开</button><button class="btn sm" id="muteBtn" type="button">音效：开</button></div>
-      <div class="row"><button class="btn sm" id="resetBtn" data-c="reset" type="button">清空本关影子</button></div>
+      <div class="row"><button class="btn sm" id="resetBtn" data-c="reset" type="button">重开本关</button></div>
       <div class="row"><button class="btn" id="selClose" type="button">继续游戏</button></div>
     </div>
   </div>
@@ -498,7 +498,7 @@ function undo(){ if(rewinding||autoplay)return; if(won){won=false;winShown=false
   else if(ghosts.length){cur=ghosts.pop();recompute(true);toast('撤回了上一次留影');}
   queue=[];}
 function retry(){if(rewinding||autoplay)return;cur=[];won=false;winShown=false;recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);queue=[];toast('重走这一轮，影子都还在');}
-function resetAll(){if(rewinding)return;autoplay=null;ghosts=[];cur=[];won=false;winShown=false;recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);queue=[];toast('影子全部清空');}
+function resetAll(){if(rewinding)return;autoplay=null;ghosts=[];cur=[];won=false;winShown=false;recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);queue=[];clockStart();toast('已重开本关');}
 let tipT=null;
 function solve(){const t=$('tip');$('tipText').textContent=L.hint;t.hidden=false;t.style.animation='none';void t.offsetWidth;t.style.animation='';
   clearTimeout(tipT);tipT=setTimeout(()=>{t.hidden=true;},8000);}
