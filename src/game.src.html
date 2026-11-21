@@ -347,29 +347,29 @@ const SFX={
 };
 
 // ---------- sprites ----------
-const HERO=[
-"................",
-".....kkkkkk.....",
-"....khhhhhhk....",
-"...khhhhhhhhk...",
-"...khffffffhk...",
-"..khfeffffefhk..",
-"..khffffffffhk..",
-"..khhffffffhhk..",
-"..kssssssssssk..",
-"..khsssshhhhhk..",
-"..khhhsshhhhhk..",
-"..khhhhshhhhhk..",
-"..khhhhhhhhhhk..",
-"...khhhhhhhhk...",
-"...kkk.kk.kkk...",
-"................"];
-const HERO_PAL={k:'#2b2d5c',h:'#ffffff',f:'#2b2d5c',e:'#ffe46b',s:'#ff5a5f'};
+// The board buffer is drawn at 2 sub-pixels per logical pixel (HR), so sprites are 32x32 and tiles get finer detail.
+// Hero: left half of a 32x32 grid, mirrored; shading, scarf and scarf tail are added after mirroring.
+const HERO_L=[
+"................","................","..........oooooo","........oowwwwww",".......owwwwwwww","......owwwwwwwww",".....owwwwwwwwww","....owwwwwwwwwww","....owwwwfffffff","...owwwwffffffff","...owwwfffffffff","...owwwfffEeefff","...owwwfffEeefff","...owwwfffeeefff","...owwwfffeeefff","...owwwfccffffff","....owwwwfffffff","....owwwwwwwwwww","...ossssssssssss","...orrrrrrrrrrrr","...oRRRRRRRRRRRR","....owwwwwwwwwww","..ooowwwwwwwwwww",".owwwwwwwwwwwwww",".owwowwwwwwwwwww","..ooowwwwwwwwwww","....owwwwwwwwwww","....owwwwwwwwwww",".....ooooooooooo",".....obbbbo.....",".....oooooo.....","................"];
+function heroGrid(){const G=HERO_L.map(r=>(r+[...r].reverse().join('')).split(''));
+  // shade: darker right rim and lower body for roundness, a bright spot on the hood
+  for(let y=0;y<32;y++){const R=G[y].lastIndexOf('o');for(let x=0;x<32;x++){if(G[y][x]!=='w')continue;
+    if(x>=R-2)G[y][x]='m';else if(x>=R-7||y>=26)G[y][x]='l';}}
+  [[9,4],[10,4],[8,5],[9,5],[7,6],[8,6],[6,8],[6,9]].forEach(([x,y])=>{if(G[y][x]==='w')G[y][x]='h';});
+  // both eyes keep their sparkle on the left
+  for(const y of [11,12]){G[y][19]='E';G[y][21]='e';}
+  // scarf tail hanging on the right
+  [[22,21,'o'],[23,21,'r'],[24,21,'r'],[25,21,'o'],[22,22,'o'],[23,22,'r'],[24,22,'R'],[25,22,'o'],[22,23,'o'],[23,23,'r'],[24,23,'R'],[25,23,'o'],
+   [23,24,'o'],[24,24,'R'],[25,24,'o'],[23,25,'o'],[24,25,'o']].forEach(([x,y,c])=>G[y][x]=c);
+  return G;}
+const HERO_G=heroGrid();
+const HERO_PAL={o:'#2b2d5c',w:'#f7f8ff',h:'#ffffff',l:'#e4e8f8',m:'#c6cde9',f:'#33366e',e:'#ffd84a',E:'#fff8d0',c:'#ff8fa8',s:'#ff8a8a',r:'#ff5a5f',R:'#d23b4b',b:'#2b2d5c'};
 const DIGITS={1:["010","110","010","010","111"],2:["110","001","010","100","111"],3:["110","001","010","001","110"],4:["101","101","111","001","001"]};
-function makeSprite(pal,flip){const c=document.createElement('canvas');c.width=c.height=16;const x=c.getContext('2d');
-  HERO.forEach((r,y)=>{for(let i=0;i<16;i++){const ch=r[flip?15-i:i];if(ch!=='.'&&pal[ch]){x.fillStyle=pal[ch];x.fillRect(i,y,1,1);}}});return c;}
+function makeSprite(pal,flip){const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d');
+  HERO_G.forEach((r,y)=>{for(let i=0;i<32;i++){const ch=r[flip?31-i:i];if(ch!=='.'&&pal[ch]){x.fillStyle=pal[ch];x.fillRect(i,y,1,1);}}});return c;}
 const heroSpr=[makeSprite(HERO_PAL,false),makeSprite(HERO_PAL,true)];
-const ghostSpr=GHOST_COL.map(col=>[false,true].map(fl=>makeSprite({k:shade(col,-.55),h:col,f:shade(col,-.7),e:'#ffffff',s:shade(col,.35)},fl)));
+const ghostSpr=GHOST_COL.map(col=>[false,true].map(fl=>makeSprite({o:shade(col,-.6),w:shade(col,.45),h:shade(col,.75),l:shade(col,.2),m:col,f:shade(col,-.7),e:'#ffffff',E:'#ffffff',c:shade(col,.6),
+  s:shade(col,.1),r:shade(col,-.15),R:shade(col,-.4),b:shade(col,-.6)},fl)));
 function shade(hex,amt){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
   const f=v=>Math.round(amt<0?v*(1+amt):v+(255-v)*amt);return '#'+[f(r),f(g),f(b)].map(v=>v.toString(16).padStart(2,'0')).join('');}
 
@@ -377,7 +377,8 @@ function shade(hex,amt){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255
 const HOP_MS=260;let hopT=[];
 let li=0,L=null,g=null,ghosts=[],cur=[],frames=[],anim=null,queue=[],rewinding=null,won=false,winShown=false;
 let doorOpen=[],particles=[],shake=0,facing=[],autoplay=null,fast=false;
-const cv=$('cv'),ctx=cv.getContext('2d');const buf=document.createElement('canvas'),b=buf.getContext('2d');
+const cv=$('cv'),ctx=cv.getContext('2d');const buf=document.createElement('canvas');let b=buf.getContext('2d');const HR=2;
+function sizeBuf(){buf.width=g.W*TS*HR;buf.height=g.H*TS*HR;b.setTransform(HR,0,0,HR,0,0);b.imageSmoothingEnabled=false;}
 let scale=1;
 // view window: the bounding box of every non-wall tile plus a thin sliver of wall, so solid wall margins don't eat the screen
 let VX=0,VY=0,VW=1,VH=1;const SLIV=5;
@@ -395,10 +396,10 @@ function solSeq(k){return rot?L.sol[k].split('').map(c=>SW[c]).join(''):L.sol[k]
 function wantRot(){const st=$('stage');const w=st.clientWidth,h=st.clientHeight;if(!w||!h)return false;
   const W=Math.max(...L.map.map(r=>r.length)),H=L.map.length;return Math.min(w/H,h/W)>Math.min(w/W,h/H)*1.08;}
 function applyRot(r){if(r===rot)return;rot=r;ghosts=ghosts.map(swapArr);cur=swapArr(cur);queue=[];anim=null;facing=[];
-  g=parseLevel(levelView());recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);buf.width=g.W*TS;buf.height=g.H*TS;calcView();}
+  g=parseLevel(levelView());recompute(true);doorOpen=curFrame().doors.map(v=>v?1:0);sizeBuf();calcView();}
 function loadLevel(i,keep){li=i;L=LEVELS[i];rot=wantRot();g=parseLevel(levelView());ghosts=[];cur=[];won=false;winShown=false;queue=[];rewinding=null;autoplay=null;particles=[];
     recompute(true);doorOpen=frames[0].doors.slice().map(v=>v?1:0);
-  buf.width=g.W*TS;buf.height=g.H*TS;calcView();resize();
+  sizeBuf();calcView();resize();
   clockStart();guideReset();
   $('tip').hidden=true;$('coach').hidden=!!store.get('zuori-coached',false);
   hideOv();{const it=$('intro');it.innerHTML='<small>第 '+(i+1)+' 关</small>'+L.name;it.classList.remove('show');void it.offsetWidth;it.classList.add('show');}
@@ -507,18 +508,16 @@ $('startBtn').onclick=()=>{ac();const last=store.get('zuori-last',0);const maxOp
 $('selBtn').onclick=()=>{ac();showSel();};
 $('menuBtn').onclick=showSel;
 $('helpBtn').onclick=()=>{hideOv();drawHelpIcons();$('helpOv').hidden=false;};$('helpClose').onclick=hideOv;
-function drawHelpIcons(){document.querySelectorAll('canvas[data-icon]').forEach(c=>{if(c.dataset.done)return;c.dataset.done=1;c.width=c.height=16;const x=c.getContext('2d');
-  const P=(col,a,b2,w=1,h=1)=>{x.fillStyle=col;x.fillRect(a,b2,w,h);};const k=c.dataset.icon;
-  if(k==='hero')x.drawImage(heroSpr[0],0,0);
-  else if(k==='ghost'){x.globalAlpha=.75;x.drawImage(ghostSpr[0][0],0,0);}
-  else if(k==='plate'){P(shade(PLATE_COL.a,-.6),2,3,12,11);P(PLATE_COL.a,3,3,10,9);P(shade(PLATE_COL.a,.35),3,3,10,1);P(shade(PLATE_COL.a,-.4),5,6,6,3);}
-  else if(k==='door'||k==='inv'){const col=k==='door'?PLATE_COL.a:PLATE_COL.b;P(shade(col,-.45),1,0,14,16);for(let i=0;i<4;i++)P(col,2+i*4,0,2,16);
-    if(k==='inv'){for(let yy=0;yy<16;yy++)P(shade(col,-.7),1+((yy*2)%14),yy,2,1);for(let i=0;i<16;i+=4){P(col,i,0,2,1);P(col,i,15,2,1);}}}
-  else if(k==='box'){P('#3b2414',1,1,14,14);P('#a16a3c',2,2,12,11);P('#c88b52',2,2,12,1);P('#7b4e2a',2,7,12,1);P('#7b4e2a',7,2,1,11);}
-  else if(k==='key'){const X0=3,Y0=5,o='#5a3d0a',kk='#ffd84a';P(o,X0,Y0,4,6);P(kk,X0+1,Y0+1,2,4);P('#fff3d6',X0+1,Y0+2,2,2);P(o,X0+4,Y0+2,6,2);P(kk,X0+4,Y0+2,6,1);P(o,X0+7,Y0+4,1,2);P(o,X0+9,Y0+4,1,2);}
-  else if(k==='lock'){P('#3b2414',0,0,16,16);P('#8a5a2e',1,1,14,14);for(let i=0;i<3;i++)P('#6e4522',1,4+i*4,14,1);P('#c9a227',5,5,6,7);P('#ffd84a',5,5,6,1);P('#3b2414',7,7,2,2);P('#3b2414',7,9,1,2);}
-  else if(k==='portal'){P('#120f22',2,3,12,10);P('#120f22',3,2,10,12);for(let i=0;i<10;i++){const a=i*Math.PI/5;P(i%2?'#ff5fd2':'#ffd1f3',Math.round(8+Math.cos(a)*5)-1,Math.round(8+Math.sin(a)*4.3)-1,2,2);}P('#ff5fd2',7,7,2,2);}
-  else if(k==='exit'){paintGem(P,2,3);P('#ffffff',3,2,1,3);P('#ffffff',2,3,3,1);}});}$('selClose').onclick=()=>{hideOv();};
+function drawHelpIcons(){document.querySelectorAll('canvas[data-icon]').forEach(c=>{if(c.dataset.done)return;c.dataset.done=1;c.width=c.height=32;
+  const save=b;b=c.getContext('2d');b.setTransform(HR,0,0,HR,0,0);b.imageSmoothingEnabled=false;const k=c.dataset.icon;
+  try{if(k==='hero')drawGuy(heroSpr[0],0,0,0,1);
+  else if(k==='ghost')drawGuy(ghostSpr[0][0],0,0,0,.8);
+  else if(k==='plate')drawPlate(0,0,'a',false,0);
+  else if(k==='door'||k==='inv'){const ok=isWall;isWall=(x,y)=>y!==0;drawDoor(0,{x:0,y:0,col:k==='door'?'a':'b',inv:k==='inv'},0,false,0);isWall=ok;}
+  else if(k==='box')drawBox(0,0);
+  else if(k==='key')drawKey(3,5,1);
+  else if(k==='lock')drawLock(0,0);
+  else if(k==='exit')paintGem(5,9);}finally{b=save;}});}$('selClose').onclick=()=>{hideOv();};
 $('againBtn').onclick=()=>loadLevel(li);$('winSel').onclick=showSel;
 $('nextBtn').onclick=()=>{if(li+1<LEVELS.length)loadLevel(li+1);else showSel();};
 function toggleMute(){muted=!muted;store.set('zuori-muted',muted);$('muteBtn').textContent='音效：'+(muted?'关':'开');}
@@ -590,81 +589,89 @@ function resize(){if(!g)return;if(!rewinding&&!autoplay)applyRot(wantRot());cons
   cv.width=Math.round(vw()*px);cv.height=Math.round(vh()*px);cv.style.width=(cv.width/dpr)+'px';cv.style.height=(cv.height/dpr)+'px';}
 new ResizeObserver(resize).observe($('stage'));
 function hash(x,y){let h=x*374761393+y*668265263;h=(h^(h>>13))*1274126177;return ((h^(h>>16))>>>0)/4294967295;}
-function isWall(x,y){return x<0||y<0||x>=g.W||y>=g.H||g.tiles[y][x]==='#';}
+let isWall=function(x,y){return x<0||y<0||x>=g.W||y>=g.H||g.tiles[y][x]==='#';}
 function px(c,x,y,w=1,h=1){b.fillStyle=c;b.fillRect(x,y,w,h);}
-// floor: cream checkerboard; every tile gets a darker line on its right and bottom edge so tiles are easy to count
-const FLOOR_A='#fff6df',FLOOR_B='#ffecc4',FLOOR_LINE='#e2c58e';
-function drawFloor(x,y){const X=x*TS,Y=y*TS;px((x+y)%2?FLOOR_B:FLOOR_A,X,Y,TS,TS);
-  px(FLOOR_LINE,X+TS-1,Y,1,TS);px(FLOOR_LINE,X,Y+TS-1,TS,1);
-  if(isWall(x,y-1)){b.globalAlpha=.35;px('#c79a52',X,Y,TS,2);b.globalAlpha=1;}
-  if(isWall(x-1,y)){b.globalAlpha=.18;px('#c79a52',X,Y,1,TS);b.globalAlpha=1;}}
-// walls: chunky periwinkle blocks with a light top edge and a darker front face where floor is below
-function drawWall(x,y){const X=x*TS,Y=y*TS;const below=!isWall(x,y+1);
-  px('#7378e6',X,Y,TS,TS);
-  if(!isWall(x,y-1))px('#a9adff',X,Y,TS,2);
-  if(!isWall(x-1,y))px('#9095f5',X,Y,1,TS);
-  if(hash(x,y)<.3)px('#8287ee',X+3+Math.floor(hash(y,x)*8),Y+4+Math.floor(hash(x+1,y)*4),3,2);
-  if(below){px('#5156c4',X,Y+10,TS,6);px('#3d41a3',X,Y+15,TS,1);for(let i=0;i<TS;i+=8)px('#464ab6',X+i+(y%2)*4,Y+10,1,5);}}
-function drawPlate(x,y,c,on,t){const X=x*TS,Y=y*TS;const col=PLATE_COL[c];
-  if(on){b.globalAlpha=.25+.1*Math.sin(t/200);px(col,X+1,Y+1,14,14);b.globalAlpha=1;}
-  px(shade(col,-.6),X+2,Y+3,12,11);px(on?shade(col,-.15):col,X+3,on?Y+4:Y+3,10,on?9:9);
-  if(!on)px(shade(col,.35),X+3,Y+3,10,1);px(shade(col,-.4),X+5,Y+(on?7:6),6,3);}
-function drawDoor(i,d,open,jam,t){const X=d.x*TS,Y=d.y*TS;const col=PLATE_COL[d.col];
+// q(): paint in sub-pixels (2 per logical pixel, so a tile is 32x32). X/Y below are sub-pixel coordinates.
+function q(c,x,y,w=1,h=1){b.fillStyle=c;b.fillRect(x/HR,y/HR,w/HR,h/HR);}
+function rr(c,x,y,w,h){q(c,x+1,y,w-2,h);q(c,x,y+1,w,h-2);}   // rectangle with the corner pixels cut off
+// floor: cream checkerboard with a soft bevel, a little grain, and a clear grid line on every right/bottom edge
+const FLOOR_A='#fff6e0',FLOOR_B='#ffedc8',FLOOR_LINE='#d9b97f';
+function drawFloor(x,y){const X=x*32,Y=y*32;const base=(x+y)%2?FLOOR_B:FLOOR_A;
+  q(base,X,Y,32,32);q('#fffbf2',X,Y,32,1);q('#fffbf2',X,Y,1,32);
+  q('#ecd6aa',X,Y+30,32,1);q('#ecd6aa',X+30,Y,1,32);q(FLOOR_LINE,X,Y+31,32,1);q(FLOOR_LINE,X+31,Y,1,32);
+  for(let i=0;i<3;i++){const r=hash(x*7+i,y*13+i);if(r<.55)q('#f2dfb8',X+4+Math.floor(hash(x+i,y)*22),Y+4+Math.floor(hash(x,y+i)*22),2+(r<.2?1:0),1);}
+  if(isWall(x,y-1)){b.globalAlpha=.3;q('#b8925a',X,Y,32,4);b.globalAlpha=.15;q('#b8925a',X,Y+4,32,3);b.globalAlpha=1;}
+  if(isWall(x-1,y)){b.globalAlpha=.16;q('#b8925a',X,Y,3,32);b.globalAlpha=1;}}
+// walls: periwinkle brickwork with lit top edges, and a darker stone front face wherever floor lies below
+function drawWall(x,y){const X=x*32,Y=y*32;const below=!isWall(x,y+1);
+  q('#7a7fe8',X,Y,32,32);
+  for(let r=0;r<4;r++){const by=Y+r*8,gr=y*4+r;q('#8d92f0',X,by,32,1);q('#686dd8',X,by+7,32,1);
+    for(let jx=((gr%2)?8:0);jx<32;jx+=16){q('#686dd8',X+jx,by,1,7);q('#8d92f0',X+jx+1,by+1,1,5);}
+    if(hash(x*5+r,y*3)<.25){const ox=Math.floor(hash(y+r,x)*20);q('#7277e2',X+ox+2,by+2,8,4);}}
+  if(!isWall(x,y-1)){q('#c0c3ff',X,Y,32,2);q('#a2a6f8',X,Y+2,32,1);}
+  if(!isWall(x-1,y))q('#a2a6f8',X,Y,2,32);
+  if(!isWall(x+1,y))q('#5d62cf',X+30,Y,2,32);
+  if(below){q('#5f64d2',X,Y+20,32,3);q('#5358c6',X,Y+23,32,6);q('#454ab0',X,Y+29,32,3);
+    for(let jx=(y%2)?8:0;jx<32;jx+=16){q('#4a4fb8',X+jx,Y+21,1,8);q('#6a6fd8',X+jx+1,Y+21,1,8);}
+    q('#3a3e9e',X,Y+31,32,1);}}
+function drawPlate(x,y,c,on,t){const X=x*32,Y=y*32;const col=PLATE_COL[c];
+  if(on){b.globalAlpha=.22+.1*Math.sin(t/200);rr(col,X+1,Y+2,30,29);b.globalAlpha=1;}
+  rr(shade(col,-.62),X+3,Y+6,26,23);                                // dark rim
+  if(on){rr(shade(col,-.18),X+4,Y+10,24,18);rr(shade(col,-.35),X+10,Y+14,12,9);q(shade(col,-.05),X+11,Y+22,10,1);}
+  else{rr(shade(col,-.3),X+4,Y+20,24,8);                            // side face
+    rr(col,X+4,Y+6,24,17);q(shade(col,.45),X+6,Y+7,20,2);q(shade(col,.25),X+5,Y+9,1,10);   // top face + shine
+    rr(shade(col,-.28),X+10,Y+11,12,8);q(shade(col,-.45),X+11,Y+11,10,2);q(shade(col,.2),X+11,Y+18,10,1);}}   // groove
+function drawDoor(i,d,open,jam,t){const X=d.x*32,Y=d.y*32;const col=PLATE_COL[d.col];
   drawFloor(d.x,d.y);
-  const vert=isWall(d.x,d.y-1)&&isWall(d.x,d.y+1); // door in a vertical wall
-  px(shade(col,-.55),X,Y,vert?TS:2,vert?2:TS);px(shade(col,-.55),vert?X:X+14,vert?Y+14:Y,vert?TS:2,vert?2:TS);
-  const k=1-open;if(k>0.02){
-    const len=Math.round(TS*k);
-    if(vert){ // bars hang from top
-      px(shade(col,-.45),X+1,Y,14,len);
-      for(let i=0;i<4;i++)px(col,X+2+i*4,Y,2,len);
-      if(d.inv){for(let yy=0;yy<len;yy++)px(shade(col,-.7),X+1+((yy*2)%14),Y+yy,2,1);}
-      px(shade(col,.4),X+1,Y+len-1,14,1);
-    }else{
-      px(shade(col,-.45),X,Y+1,len,14);
-      for(let i=0;i<4;i++)px(col,X,Y+2+i*4,len,2);
-      if(d.inv){for(let xx=0;xx<len;xx++)px(shade(col,-.7),X+xx,Y+1+((xx*2)%14),1,2);}
-      px(shade(col,.4),X+len-1,Y+1,1,14);
-    }
-  }
-  if(d.inv){b.globalAlpha=.9;for(let i=0;i<TS;i+=4){px(col,X+i,Y,2,1);px(col,X+i,Y+15,2,1);}b.globalAlpha=1;}
-  if(jam&&k>0.02){b.globalAlpha=.5+.5*Math.sin(t/90);px('#ffffff',X+7,Y+1,2,2);b.globalAlpha=1;}}
-// the goal: a floating pixel diamond. P(colour,x,y,w,h) paints into whichever canvas is calling
-const GEM_ROWS=[[3,8],[2,9],[1,10],[0,11],[1,10],[2,9],[3,8],[4,7],[5,6]];
-function paintGem(P,X,Y){GEM_ROWS.forEach(([l,r],j)=>{for(let i=l;i<=r;i++){let c;
-    if(j===0)c='#ffffff';                                   // table (top face)
-    else if(j<3)c=i<4?'#ffffff':i<8?'#e4f1ff':'#b9d3ff';   // crown facets
-    else if(j===3)c='#ffffff';                              // girdle sparkle line
-    else c=i<6?'#d2e4ff':'#93b4f0';                         // pavilion, lit left / shaded right
-    if(i===l||i===r)c=j<4?'#8fb0ee':'#6a86d6';             // outline
-    P(c,X+i,Y+j,1,1);}});}
-function drawExit(x,y,t){drawFloor(x,y);const X=x*TS+2,Y=y*TS+2;
-  const bob=Math.round(Math.sin(t/320)*1.2);
-  b.globalAlpha=.45+.15*Math.sin(t/300);px('#9fdcff',X-1,Y+1,14,8);px('#9fdcff',X+1,Y-1,10,12);b.globalAlpha=1;   // glow
-  b.globalAlpha=.25-bob*.05;px('#2b2d5c',X+3,Y+11,6,1);px('#2b2d5c',X+2,Y+12,8,1);b.globalAlpha=1;   // floor shadow
-  paintGem(px,X,Y-1+bob);
-  // twinkles: a little cross that hops between three spots
-  const k=Math.floor(t/420)%3,ph=(t%420)/420,sp=[[1,0],[10,1],[3,5]][k],a=Math.sin(ph*Math.PI);
-  if(a>.2){b.globalAlpha=a;const sx=X+sp[0],sy=Y-1+bob+sp[1];px('#ffffff',sx,sy-1,1,3);px('#ffffff',sx-1,sy,3,1);b.globalAlpha=1;}}
-function drawBox(x,y){const X=Math.round(x*TS),Y=Math.round(y*TS);
-  px('#3b2414',X+1,Y+1,14,14);px('#a16a3c',X+2,Y+2,12,11);px('#c88b52',X+2,Y+2,12,1);
-  px('#7b4e2a',X+2,Y+7,12,1);px('#7b4e2a',X+7,Y+2,1,11);px('#5c3a1f',X+2,Y+13,12,1);}
-// key: 10x6 pixel key, X/Y in buffer pixels
-function drawKey(X,Y,alpha){b.globalAlpha=alpha;const o='#5a3d0a',k='#ffd84a',h='#fff3b0';
-  px(o,X,Y,4,6);px(k,X+1,Y+1,2,4);px(h,X+1,Y+1,1,1);px(FLOOR_A,X+1,Y+2,2,2);   // ring with hole
-  px(o,X+4,Y+2,6,2);px(k,X+4,Y+2,6,1);px(o,X+7,Y+4,1,2);px(o,X+9,Y+4,1,2);px(k,X+7,Y+4,1,1);px(k,X+9,Y+4,1,1);b.globalAlpha=1;}
-// locked door: heavy wooden door with a gold keyhole plate
-function drawLock(x,y){const X=x*TS,Y=y*TS;px('#3b2414',X,Y,TS,TS);px('#8a5a2e',X+1,Y+1,14,14);
-  for(let i=0;i<3;i++)px('#6e4522',X+1,Y+4+i*4,14,1);px('#a87444',X+1,Y+1,14,1);
-  px('#c9a227',X+5,Y+5,6,7);px('#ffd84a',X+5,Y+5,6,1);px('#3b2414',X+7,Y+7,2,2);px('#3b2414',X+7.5|0,Y+9,1,2);}
-// portal: a swirling ring; each pair has its own colour, the uppercase end is drawn slightly darker
-const PORTAL_COL={p:['#ff5fd2','#ffd1f3'],q:['#3fe0a0','#c8ffe9']};
-function drawPortal(x,y,pair,t){const X=x*TS+8,Y=y*TS+8;const [c1,c2]=PORTAL_COL[pair]||PORTAL_COL.p;
-  b.globalAlpha=.9;px('#120f22',X-6,Y-5,12,10);px('#120f22',X-5,Y-6,10,12);
-  for(let i=0;i<10;i++){const a=t/260+i*Math.PI/5,r=5+Math.sin(t/200+i)*.6;px(i%2?c1:c2,Math.round(X+Math.cos(a)*r)-1,Math.round(Y+Math.sin(a)*r*.85)-1,2,2);}
-  b.globalAlpha=.5+.3*Math.sin(t/180);px(c1,X-1,Y-1,2,2);b.globalAlpha=1;}
-function drawGuy(spr,x,y,bob,alpha){b.globalAlpha=alpha;b.drawImage(spr,Math.round(x*TS),Math.round(y*TS-bob));b.globalAlpha=1;}
-function drawDigit(n,X,Y,col){const d=DIGITS[n];if(!d)return;px('#13111d',X-1,Y-1,5,7);d.forEach((r,yy)=>{for(let i=0;i<3;i++)if(r[i]==='1')px(col,X+i,Y+yy);});}
+  const vert=isWall(d.x,d.y-1)&&isWall(d.x,d.y+1);
+  // draw in door space: u runs across the bars, v along them; Q() maps that onto the tile for either orientation
+  const Q=(c,u,v,w,h)=>vert?q(c,X+u,Y+v,w,h):q(c,X+v,Y+u,h,w);
+  const dk=shade(col,-.6),md=shade(col,-.3),lt=shade(col,.45);
+  Q(dk,0,0,32,4);Q(md,0,0,32,1);Q(dk,0,28,32,4);Q(md,0,28,32,1);   // rails the bars slide into
+  for(let u=2;u<32;u+=8){Q('#e8ecf5',u,1,2,2);Q('#e8ecf5',u,29,2,2);}   // rivets
+  const k=1-open;if(k>0.02){const len=Math.max(4,Math.round(28*k));
+    Q(shade(col,-.5),2,2,28,len);
+    for(let j=0;j<4;j++){const u=3+j*7;Q(col,u,2,4,len);Q(lt,u,2,1,len);Q(shade(col,-.22),u+3,2,1,len);}
+    if(d.inv)for(let v=0;v<len;v++){Q(shade(col,-.72),2+((v*2)%28),2+v,3,1);Q(shade(col,-.72),2+((v*2+14)%28),2+v,3,1);}
+    Q(md,2,len-2,28,4);Q(lt,2,len-2,28,1);Q(dk,2,len+1,28,1);Q('#ffffff',5,len-1,1,1);Q('#ffffff',26,len-1,1,1);}
+  if(d.inv){b.globalAlpha=.95;for(let u=0;u<32;u+=8){Q(col,u+3,0,4,1);Q(col,u+3,31,4,1);}b.globalAlpha=1;}
+  if(jam&&k>0.02){b.globalAlpha=.5+.5*Math.sin(t/90);Q('#ffffff',14,4,4,4);b.globalAlpha=1;}}
+// the goal: a floating, faceted pixel diamond (22x14 sub-pixels) with a soft glow
+const GEM=(()=>{const rows=[[5,16],[3,18],[1,20],[0,21]];for(let y=4;y<14;y++)rows.push([y-3,24-y]);return rows;})();
+function paintGem(X,Y){GEM.forEach(([l,r],y)=>q('#3f6fcf',X+l-1,Y+y+(y<4?-1:0),r-l+3,2));q('#3f6fcf',X+5,Y-1,12,1);q('#3f6fcf',X+10,Y+14,2,1);
+  GEM.forEach(([l,r],y)=>{for(let x=l;x<=r;x++){let c;
+    if(y<3){const f=(x-l)/(r-l||1);c=f<.3?'#e6f5ff':f<.68?'#ffffff':'#b9dcff';if(y===0&&f<.6)c='#ffffff';}
+    else if(y===3)c=x<8?'#cfeaff':x<15?'#e9f6ff':'#a9d2ff';
+    else c=x<8?'#c4e4ff':x<14?'#8fc6ff':'#5c9de8';
+    q(c,X+x,Y+y,1,1);}});
+  q('#ffffff',X+4,Y+4,1,3);q('#ffffff',X+5,Y+6,1,2);}
+function drawExit(x,y,t){drawFloor(x,y);const X=x*32+5,Y=y*32+8;
+  const bob=Math.round(Math.sin(t/320)*2.4);
+  const gl=Math.sin(t/300);[[12,'#9fdcff',.16],[9,'#bfe8ff',.2]].forEach(([rad,c,al])=>{b.globalAlpha=al+.08*gl;for(let dy=-rad;dy<=rad;dy++){const w=Math.round(Math.sqrt(1-(dy/rad)**2)*rad*1.25);q(c,X+11-w,Y+6+dy,w*2,1);}});b.globalAlpha=1;
+  b.globalAlpha=.25-bob*.03;q('#2b2d5c',X+5,Y+19,12,2);q('#2b2d5c',X+7,Y+21,8,1);b.globalAlpha=1;
+  paintGem(X,Y-2+bob);
+  const k=Math.floor(t/420)%3,ph=(t%420)/420,sp=[[2,0],[20,2],[6,9]][k],a=Math.sin(ph*Math.PI);
+  if(a>.2){b.globalAlpha=a;const sx=X+sp[0],sy=Y-2+bob+sp[1];q('#ffffff',sx,sy-3,1,7);q('#ffffff',sx-3,sy,7,1);q('#ffffff',sx-1,sy-1,3,3);b.globalAlpha=1;}}
+// wooden crate: outlined planks, a diagonal brace, metal corner brackets
+function drawBox(x,y){const X=Math.round(x*32),Y=Math.round(y*32);
+  rr('#4a2a12',X+2,Y+3,28,28);rr('#5a3216',X+2,Y+2,28,27);rr('#b9783f',X+3,Y+3,26,23);q('#6b3f1d',X+3,Y+26,26,3);
+  q('#dca46a',X+4,Y+3,24,1);
+  [9,15,21].forEach(v=>{q('#8c5528',X+3,Y+v,26,1);q('#cf9258',X+3,Y+v+1,26,1);});
+  for(let i=0;i<18;i++){q('#8c5528',X+6+i,Y+23-i,2,1);q('#cf9258',X+6+i,Y+22-i,1,1);}
+  [[3,3],[25,3],[3,22],[25,22]].forEach(([u,v])=>{q('#6c7894',X+u,Y+v,4,4);q('#c5cde0',X+u,Y+v,4,1);q('#c5cde0',X+u,Y+v,1,4);q('#3b4256',X+u+1,Y+v+1,1,1);});}
+// key: 20x12 sub-pixel golden key. X/Y are logical pixels (as before)
+function drawKey(X,Y,alpha){b.globalAlpha=alpha;X*=HR;Y*=HR;const o='#7a5200',k='#ffd23f',h='#fff2a8',d='#e0a800';
+  rr(o,X,Y,9,12);rr(k,X+1,Y+1,7,10);q(h,X+2,Y+1,3,1);q(h,X+1,Y+2,1,3);q(d,X+6,Y+8,2,3);q(FLOOR_A,X+3,Y+4,3,4);q(o,X+3,Y+4,3,1);
+  q(o,X+8,Y+4,12,4);q(k,X+8,Y+5,11,2);q(h,X+9,Y+5,10,1);
+  q(o,X+13,Y+8,3,4);q(k,X+14,Y+8,1,3);q(o,X+17,Y+8,3,3);q(k,X+18,Y+8,1,2);b.globalAlpha=1;}
+// locked door: planked wooden door with iron bands and a gold lock plate
+function drawLock(x,y){const X=x*32,Y=y*32;q('#4a2a12',X,Y,32,32);q('#9c6434',X+2,Y+2,28,28);
+  [9,16,23].forEach(u=>{q('#7d4c24',X+u,Y+2,1,28);q('#b27a46',X+u+1,Y+2,1,28);});q('#b98450',X+2,Y+2,28,1);
+  [5,23].forEach(v=>{q('#4f5770',X+2,Y+v,28,4);q('#9aa4bd',X+2,Y+v,28,1);[5,26].forEach(u=>{q('#d5dbe8',X+u,Y+v+1,2,2);});});
+  rr('#8a6400',X+10,Y+10,12,13);rr('#ffd23f',X+11,Y+11,10,11);q('#fff2a8',X+12,Y+11,8,1);q('#d9a400',X+11,Y+20,10,2);
+  rr('#3b2414',X+14,Y+13,4,4);q('#3b2414',X+15,Y+16,2,4);}
+function drawGuy(spr,x,y,bob,alpha){b.globalAlpha=alpha;b.drawImage(spr,Math.round(x*TS*HR)/HR,Math.round((y*TS-bob)*HR)/HR,TS,TS);b.globalAlpha=1;}
+function drawDigit(n,X,Y,col){const d=DIGITS[n];if(!d)return;X*=HR;Y*=HR;rr('#2b2d5c',X-2,Y-2,10,14);d.forEach((r,yy)=>{for(let i=0;i<3;i++)if(r[i]==='1')q(col,X+i*2,Y+yy*2,2,2);});}
 function dust(x,y){for(let k=0;k<5;k++){const d=k<2?-1:k<4?1:0;particles.push({x:x*TS+8+d*3,y:y*TS+14,vx:d*(.25+Math.random()*.3),vy:-.15-Math.random()*.2,life:14+Math.random()*6,col:'#d6b77c'});}}
 function burst(x,y,col,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.4+Math.random()*1.6;
   particles.push({x:x*TS+8,y:y*TS+8,vx:Math.cos(a)*s,vy:Math.sin(a)*s-.5,life:40+Math.random()*30,col});}}
@@ -706,7 +713,7 @@ function render(now){
     if(won&&celeT0&&!rewinding){bob+=Math.abs(Math.sin((now-celeT0)/130+i*.8))*5;}
     const isP=i===n-1;const fl=facing[i]||0;
     if(isP){b.globalAlpha=.22;px('#2b2d5c',Math.round(x*TS)+3,Math.round(y*TS)+14,10,2);b.globalAlpha=1;drawGuy(heroSpr[fl],x,y,bob,1);}
-    else{const gc=i%GHOST_COL.length;const flick=.72+.1*Math.sin(now/140+i*2);drawGuy(ghostSpr[gc][fl],x,y,bob,rewinding?.35:flick);
+    else{const gc=i%GHOST_COL.length;const flick=.82+.08*Math.sin(now/140+i*2);drawGuy(ghostSpr[gc][fl],x,y,bob,rewinding?.35:flick);
       drawDigit(i+1,Math.round(x*TS)+12,Math.round(y*TS-bob)+1,GHOST_COL[gc]);
       if(cur.length>=ghosts[i].length&&!rewinding){b.globalAlpha=.6;px(GHOST_COL[gc],Math.round(x*TS)+2,Math.round(y*TS)+15,12,1);b.globalAlpha=1;}}
     if(F.held&&F.held[i]>0)drawKey(Math.round(x*TS)+1,Math.round(y*TS-bob)-6,isP?1:.8);}   // carrying a key: a little key over the head
@@ -717,12 +724,12 @@ function render(now){
   // blit
   ctx.imageSmoothingEnabled=false;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
   let sx=0,sy=0;if(shake>0){sx=(Math.random()-.5)*shake*scale*.5;shake*=.85;if(shake<.3)shake=0;}
-  if(rewinding){const strips=12,h=buf.height/strips;
-    for(let s=0;s<strips;s++){const off=(Math.random()-.5)*6;ctx.drawImage(buf,VX,s*h,VW,h,off*scale,(s*h-VY)*scale,cv.width,h*scale);}
+  if(rewinding){const strips=12,h=g.H*TS/strips;
+    for(let s=0;s<strips;s++){const off=(Math.random()-.5)*6;ctx.drawImage(buf,VX*HR,s*h*HR,VW*HR,h*HR,off*scale,(s*h-VY)*scale,cv.width,h*scale);}
     ctx.fillStyle='rgba(47,211,220,.18)';ctx.fillRect(0,0,cv.width,cv.height);
     ctx.fillStyle='rgba(0,0,0,.25)';for(let y=0;y<cv.height;y+=Math.max(2,Math.round(scale)*2))ctx.fillRect(0,y,cv.width,Math.max(1,Math.round(scale)));
     ctx.fillStyle='#5ee6e6';ctx.font='bold '+Math.round(8*scale)+'px ui-monospace,monospace';ctx.textBaseline='top';ctx.fillText('◀◀ 留影',6*scale,4*scale);
-  }else ctx.drawImage(buf,VX,VY,VW,VH,sx,sy,cv.width,cv.height);
+  }else ctx.drawImage(buf,VX*HR,VY*HR,VW*HR,VH*HR,sx,sy,cv.width,cv.height);
 }
 function occupied(F,x,y){return F.a.some(q=>q.x===x&&q.y===y)||F.boxes.some(q=>q.x===x&&q.y===y);}
 function ease(p){return 1-Math.pow(1-p,3);}
